@@ -1,0 +1,11 @@
+﻿//goDoCommand
+
+//decodeURIComponent(gURLBar.value)
+//goDoCommand('cmd_paste')
+gURLBar.handleCommand
+gURLBar._canonizeURL
+url=gURLBar.value
+ var postData = {};
+    url = getShortcutOrURI(url, postData);
+
+postData.value

@@ -1,0 +1,802 @@
+﻿<?xml version="1.0" encoding="UTF-8"?>
+<!-- ***** BEGIN LICENSE BLOCK *****
+   -
+   - The Initial Developer of the Original Code is
+   - Harutyun Amirjanyan <amirjanyan@gmail.com>.
+   - Portions created by the Initial Developer are Copyright (C) 2010
+   - the Initial Developer. All Rights Reserved.
+   -
+   - ***** END LICENSE BLOCK ***** -->
+
+<bindings xmlns="http://www.mozilla.org/xbl"
+          xmlns:html="http://www.w3.org/1999/xhtml"
+          xmlns:xul="http://www.mozilla.org/keymaster/gatekeeper/there.is.only.xul"
+          xmlns:xbl="http://www.mozilla.org/xbl">
+	<binding id="urlbar" extends="chrome://browser/content/urlbarBindings.xml#urlbar" inheritstyle ="true">
+		<content sizetopopup="pref" fission="">
+			<xul:hbox class="autocomplete-textbox-container" flex="1">
+				<children includes="image|deck|stack|box">
+					<xul:image class="autocomplete-icon" allowevents="true"/>
+				</children>
+				<xul:stack class="fission-progress-stack" flex="1" context="" >
+					<children includes="progressmeter"/>
+					<xul:hbox class="autocomplete-textbox-container-fission" >
+<xul:stack flex="1">
+<xul:hbox flex="1" >
+<xul:hbox flex="1" class="urlbarAll" >
+	<xul:vbox flex="1" anonid="textbox-input-box" class="textbox-input-box plain " align="stretch">
+	   <xul:vbox anonid="textbox-input-box-inner" xbl:inherits="tooltiptext=inputtooltiptext"
+				 flex="1" >
+			<html:input anonid="input" class="autocomplete-textbox textbox-input smart-text-input" style="cursor:inherit"
+						flex="1" allowevents="true"
+						xbl:inherits="tooltiptext=inputtooltiptext,onfocus,onblur,value,type,maxlength,disabled,size,readonly,userAction"/>
+		</xul:vbox>
+	</xul:vbox>
+
+	<xul:hbox  anonid="smart-text-scroll" class="smart-text" flex="1"  style="overflow-x:hidden;display:none;" 
+				ondragover="gURLBar.layerManager.makePlain()"  ondragexit="nsDragAndDrop.dragExit(event, gURLBar);">
+		<html:stsegment anonid="proto" class=""></html:stsegment>
+		<xul:stsegment anonid="proto" class="smart-text-end" flex="1"></xul:stsegment>
+	</xul:hbox>
+
+	<xul:box anonid="overflow-ellipsis" class="smart-text-ellipsis" onclick="gURLBar.inputclicks.elipsisClick(event);"
+				style="-moz-user-select:none;-moz-box-align:center" ><html:div>...</html:div></xul:box>
+
+</xul:hbox>
+</xul:hbox>
+<xul:hbox flex="1" style='pointer-events:none' class="elipsis-mask" >
+	<xul:vbox flex='1' class='f' >
+		<xul:vbox  flex='3' style='pointer-events:auto'/>
+		<xul:vbox  flex='5' style='pointer-events:auto'/>
+	</xul:vbox>
+	<xul:hbox style='pointer-events:auto;min-width:80px'/>
+</xul:hbox>
+</xul:stack>
+
+
+<children includes="hbox"/>
+					</xul:hbox>
+				</xul:stack>
+			</xul:hbox>
+			<xul:dropmarker anonid="historydropmarker" class="autocomplete-history-dropmarker" allowevents="true" xbl:inherits="open,enablehistory"/>
+			<children/>
+			<xul:popupset anonid="popupset" class="autocomplete-result-popupset"/>
+		</content>
+
+
+    <implementation implements="nsIDOMEventListener, nsIObserver">
+    <constructor><![CDATA[
+		this.urlSplitter.init()
+		this.selector.init()
+		this.inputclicks.init()
+		this.layerManager.init()
+		this.clickSelectsAll=false
+
+		if(this.layerManager.synch(this.inputField.value))
+			this.layerManager.makePretty()
+        this.inputField.removeEventListener("mousemove", this, false);
+        this.plain = false;
+    ]]></constructor>
+	<destructor><![CDATA[
+        /**/
+    ]]></destructor>
+
+    <field name="inputBox">
+        document.getAnonymousElementByAttribute(this, "anonid", "textbox-input-box");
+      </field>
+    <field name="inputBoxInner">
+        document.getAnonymousElementByAttribute(this, "anonid", "textbox-input-box-inner");
+      </field>
+    <field name="smartTextScroll">
+        document.getAnonymousElementByAttribute(this, "anonid", "smart-text-scroll");
+      </field>
+    <field name="smartText">
+        document.getAnonymousElementByAttribute(this, "anonid", "smart-text-scroll");
+    </field>
+    <field name="_focused"/>
+	<field name="smartTextContainer" readonly="true">
+        document.getAnonymousElementByAttribute(this, "anonid", "smart-text")
+    </field>
+
+
+
+    <field name="_tldService" readonly="true"><![CDATA[
+        Components.classes["@mozilla.org/network/effective-tld-service;1"]
+                  .getService(Components.interfaces.nsIEffectiveTLDService);
+    ]]></field>
+
+    <property name="contentIsCropped" onget="return false;" onset="return false;"/>
+
+    <property name="value"
+                onget="return (this.hasAttribute('isempty') || this.hasAttribute('empty')) ? '' : this.inputField.value;">
+        <setter><![CDATA[
+			this.mIgnoreInput = true;
+			this.inputField.value = val;
+			this.mIgnoreInput = false;
+			if(!this._focused){
+				this.layerManager.synch(val)
+				if(this.plain)
+					this.layerManager.makePretty()
+			}
+			var event = document.createEvent("Events");
+			event.initEvent("ValueChange", true, true);
+			this.inputField.dispatchEvent(event);
+			return val;
+        ]]></setter>
+      </property>
+
+	  <method name="_updateVisibleText">
+        <body><![CDATA[ ]]></body>
+      </method>
+
+	  <method name="handleEvent">
+        <parameter name="aEvent"/>
+        <body><![CDATA[
+          switch(aEvent.type){
+            case "mousedown":
+              break;
+            case "mousemove":
+              this._initURLTooltip();
+              break;
+            case "mouseout":
+              this._hideURLTooltip();
+              break;
+          }
+        ]]></body>
+      </method>
+	  <method name="setOverLink">
+        <parameter name="aURL"/>
+        <body><![CDATA[
+		  
+        ]]></body>
+      </method><method name="_hideOverLink">
+        <parameter name="aURL"/>
+        <body><![CDATA[
+		  
+        ]]></body>
+      </method><method name="_updateOverLink">
+        <parameter name="aURL"/> 
+        <body><![CDATA[
+		  
+        ]]></body>
+      </method>  <field name="_overLinkBox" readonly="true"><![CDATA[({
+        addEventListener: function(){}
+    })]]></field>
+	
+<field name="urlSplitter"><![CDATA[({
+	smartTextContainer : this.smartTextScroll,
+	proto : null,	
+	p: this.inputField,
+	elemCount:0,
+	createElem:function(className,is,ip){
+		if(ip<=is)
+			return
+		var text=this.url.substring(is,ip)
+		if(!text)
+			return
+		var el = this.proto.cloneNode(true);
+		el.index=this.elemCount;
+		el.textContent=text;
+		el.setAttribute("class",className);
+		this.smartTextContainer.appendChild(el);
+		this.elemCount++;
+		this.inds.push(ip)
+	},
+
+	clear : function(){
+		this.elemCount=0
+		var el=this.smartTextContainer
+		while (el.hasChildNodes())
+			el.removeChild(el.lastChild);
+	},
+	init: function(){
+		this.proto = this.smartTextContainer.removeChild(this.smartTextContainer.firstChild)
+		this.endnode = this.smartTextContainer.removeChild(this.smartTextContainer.firstChild);
+	},
+
+	synch: function(uri,url){
+	//dump("oooo",url,uri)
+		this.clear();
+		this.url=url;
+	//???????
+		/*url = losslessDecodeURI(url);*/
+	//create protocol node
+		this.inds=[0]
+		var i1= url.indexOf("://")+3
+		this.createElem("protocol",0,i1);
+	//look for subdomain
+		var host = uri.host, is=i1;
+		if (host) {
+			try {
+				let baseDomain = gURLBar._tldService.getBaseDomainFromHost(host);
+				is+=host.lastIndexOf(baseDomain)
+			} catch (e) {}
+		}
+	//look for domain
+		var i2= url.indexOf("/",uri.scheme=='file'?i1+1:i1)
+		if(i2<0)
+			  i2=url.length	;
+	//create and fill subdomains
+		//this.createElem("subdomain",i1,is);
+		var ip1=ip2=i1;
+		while(ip2<is){
+			ip1=ip2;
+			ip2 = url.indexOf(".",ip1+1)+1;
+			if(ip2<0||ip2>=is)
+				break;
+			this.createElem("subdomain",ip1,ip2);
+		}
+		this.createElem("subdomain",ip1,is);
+	//create and fill domain
+		this.createElem("basedomain",is,i2);
+		this.domainEnd=i2
+	//look for query
+		var i3= url.indexOf("?",i2+1)
+		if(i3<0)
+			i3=url.length
+	//fill path
+		var ip1=ip2=i2;
+		while(ip2<i3){
+			ip1=ip2;
+			ip2 = url.indexOf("/",ip1+1);
+			if(ip2<0||ip2>=i3)
+				break;
+			this.createElem("path",ip1,ip2);
+		}
+		this.createElem("path",ip1,i3);
+	//look for index
+		var i4= url.indexOf("#",i3+1)
+		if(i4<0)
+			i4=url.length
+	//fill querry
+		var ip1=ip2=i3;
+		while(ip2<i4){
+			ip1=ip2;
+			ip2 = url.indexOf("&",ip1+1);
+			if(ip2<0||ip2>=i4)
+				break;
+			this.createElem("querry",ip1,ip2);
+		}
+		this.createElem("querry",ip1,i4);
+	//create index element
+		if(i4>i3){
+			this.createElem("index",i4,url.length);
+		}
+
+	//append flex at end
+		this.smartTextContainer.appendChild(this.endnode);
+		this.endnode.index=(++this.elemCount)
+	//keep scrolled element visible
+		var pn=this.smartTextContainer
+		if(pn.scrollLeft+pn.clientWidth > pn.scrollWidth)
+			pn.scrollLeft = pn.scrollWidth
+	},
+	simpleSynch: function(url){
+		this.inds=[0];
+		this.clear();
+		this.url=url
+		this.createElem("empty",0,this.url.length);
+	//append flex at end
+		this.smartTextContainer.appendChild(this.endnode);
+		this.endnode.index=(++this.elemCount)
+	//keep scrolled element visible
+		var pn=this.smartTextContainer
+		if(pn.scrollLeft+pn.clientWidth > pn.scrollWidth)
+			pn.scrollLeft = pn.scrollWidth
+	},
+	emptySynch: function(){
+		this.inds=[0];
+		this.clear();
+		this.url=gURLBar.emptyText||gURLBar.getAttribute('placeholder')
+		this.createElem("empty",0,this.url.length);
+	}
+})]]></field>
+
+<field name="selector"><![CDATA[({
+	p1: document.getAnonymousElementByAttribute(this, "anonid", "smart-text-scroll"),
+	p:document.getAnonymousElementByAttribute(this, "anonid", "input"),
+	init: function(){
+		this.p.addEventListener("DOMMouseScroll", function(e){
+			if(e.ctrlKey){
+				if(this.scroll){
+					this.scroll=false
+					var text=this.value,offset=e.rangeOffset,st=this.selectionStart,en=this.selectionEnd
+					this.value=gURLBar.selector.scrollNumbers(text,offset,(e.detail>0?-1:1))
+					this.selectionStart=st;this.selectionEnd=en
+				}else
+					this.scroll=true
+				e.preventDefault();e.stopPropagation()
+
+			}else
+				this.editor.rootElement.scrollLeft+=(e.detail>0?1:-1)*15
+		}, true);
+
+		this.p1.addEventListener("DOMMouseScroll", function(e){
+			if(e.ctrlKey){
+				if(this.scroll){
+					this.scroll=false
+					gURLBar.selector.scrollNumbersPretty(e)
+				}else
+					this.scroll=true
+				e.preventDefault();e.stopPropagation()
+			}else
+				this.scrollLeft+=(e.detail>0?1:-1)*15
+		}, true);
+
+		this.p1.addEventListener("mousedown", this, true);
+	},
+	scrollNumbers: function(text,offset,amount){
+		var m=parseInt(text.charAt(offset))
+		if(isNaN(m))
+			m=parseInt(text.charAt(++offset))
+		if(isNaN(m))
+			m=parseInt(text.charAt(offset-=2))
+		if(isNaN(m))
+			return
+		var len=1,max=10,m1
+		m=m+amount
+		while(m>=max){
+			++len;--offset;
+			m1=parseInt(text.charAt(offset))
+			if(isNaN(m1)){
+				len--;offset++;break;
+			}
+			m=max*m1+m
+			max=10*max
+		}
+		while(m<0){
+			++len;--offset;
+			m1=parseInt(text.charAt(offset))
+			if(isNaN(m1)){
+				len--;offset++;break;
+			}
+			m=max*m1+m
+			max=10*max
+		}
+		if(m<0)m=0
+		return text.substring(0,offset)+m+text.substr(offset+len)
+	},
+	scrollNumbersPretty: function(e){
+		var text=e.rangeParent.nodeValue,offset=e.rangeOffset,amount=e.detail>0?-1:1
+		if(!text)
+			return;
+
+		var newtext=this.scrollNumbers(text,offset,amount)
+		e.rangeParent.nodeValue=newtext
+		var len=newtext.length-text.length
+		var index=e.rangeParent.parentNode.index
+		var inds=gURLBar.urlSplitter.inds
+		text=this.p.value
+		text=text.substring(0,inds[index])+newtext+text.substr(inds[index+1])
+		gURLBar.urlSplitter.url=this.p.value=text
+		
+		if(len!=0){
+			for(var i=index+1;i<inds.length;i++)
+				inds[i]+=len
+		}
+	},
+
+	selectFromElement: function(el){
+		var st, en ;
+		var ind = gURLBar.urlSplitter.inds
+		var i = el.index
+
+		if(i===ind.length-1){
+			st=0;en=ind[i-1]
+		}else if(i===ind.length){
+			st=en=ind[i-1]
+		}else if(i===0){
+			st=ind[i];en=ind[i+1]-3
+		}else{
+			st=ind[i];en=ind[i+1]
+		}
+		this.moveSelectionToInputField(st, en);
+	},
+
+	hrefFromElement: function (el) {
+		var st, en ;
+		var ind = gURLBar.urlSplitter.inds;
+		var i = el.index;
+		var url=gURLBar.urlSplitter.url
+		if(i>=ind.length-1){
+			st=0;en=ind[i-1]
+		}else {
+			st=ind[i];en=ind[i+1]
+		}
+		if(el.className==="subdomain"){
+			return url.substring(0, ind[0])+url.substring(ind[i+1], gURLBar.urlSplitter.domainEnd)
+		}else
+			return url.substring(0, en)
+	},
+
+	selectFromRange: function () {
+		var selection = window.getSelection();
+		var range = selection.getRangeAt(0);
+		var sel = {start: {node: range.startContainer, offset: range.startOffset},
+					 end: {node: range.endContainer, offset: range.endOffset}};
+		var ind = gURLBar.urlSplitter.inds
+
+		function normalize(point,end) {
+			while (point.node.nodeType != 3 ){
+				var newNode = point.node.childNodes[point.offset]
+				while(!newNode){
+					if(point.node===gURLBar.selector.p1){
+						return ind[ind.length-1]
+					}else{newNode = point.node.nextSibling;}
+					if(!newNode)
+						point.node = point.node.parentNode;
+				}
+				while(newNode.firstChild){
+					newNode = newNode.firstChild
+				}
+				point.node = newNode;
+			}
+			var i=point.node.parentNode.index
+			return  ind[i]+point.offset
+		}
+
+		var st = normalize(sel.start);
+		var en = normalize(sel.end);
+		this.moveSelectionToInputField(st, en);
+	},
+
+	openUri: function(event){
+		var href=this.hrefFromElement(event.originalTarget)
+		var where = whereToOpenLink(event, false, true);
+		if (where == "current")
+			gURLBar.value=href;
+		openUILinkIn(href, where, {relatedToCurrent: true});
+		event.stopPropagation();
+		event.preventDefault();
+	},
+
+	moveSelectionToInputField: function(start,end){
+		gURLBar.layerManager.makePlain();
+		this.p.focus();
+		if(typeof start!=="number"||typeof end!=="number")
+			this.p.select()
+		else this.p.setSelectionRange(start,end)
+	},
+	downcoord:[0,0],
+	handleEvent: function (event) {
+		if(event.type==="mouseup"){
+			if(event.button==2){
+				this.moveSelectionToInputField();
+				document.getAnonymousElementByAttribute(gURLBar.inputBox,'anonid','input-box-contextmenu').openPopup(null,1,event.clientX+1,event.clientY+1,true,true)
+			}else{
+				var isSel=window.getSelection().toString()
+				var state=this.state
+				var moveLen=Math.abs(this.downcoord[0]-event.clientX)+Math.abs(this.downcoord[1]-event.clientY)
+				var cls=event.originalTarget.className
+				if(cls=='empty'&&state!='left'){
+					this.selectFromRange();
+				}else if(isSel||(state==undefined && cls!=="protocol"&&cls!=="smart-text-end")||( moveLen>10)){
+					this.selectFromRange();
+				}else if(state=='left'||cls==="smart-text-end"||(state=='top' && cls==="protocol")){
+					gURLBar.inputclicks.elipsisClick(event);
+				}else if(cls==="protocol"&&state==undefined){
+					this.selectFromElement(event.originalTarget)
+				}else if(state=='top' ){
+					this.openUri(event);
+				}else{
+					this.selectFromRange();
+				}
+			}
+
+			this.p1.removeEventListener("mouseup", this, true);
+		}else if(event.type=="mousedown"){
+			if(!this.p.value){
+				this.moveSelectionToInputField()
+				return
+			}
+			this.downcoord=[event.clientX,event.clientY]
+			this.state=gURLBar.layerManager.elipsisMask.lastTarget.type
+			this.p1.addEventListener("mouseup", this, true);
+			this.p1.setCapture&&this.p1.setCapture(false)
+		}
+	}
+})]]> </field>
+
+<field name="inputclicks"><![CDATA[({
+	p: this.inputField,
+
+	init: function(){
+		this.p.addEventListener("mousedown", this, true);
+		this.p.addEventListener("mouseup", this, true);
+	},
+
+	stopEvent: function(event){
+		event.stopPropagation();event.preventDefault()
+	},
+
+	elipsisClick: function(event){
+		if(event.button==0){
+			var e,l,p
+			p=this.p
+			l=p.value.length;
+			if(l!=0&&0==p.selectionStart&&l==p.selectionEnd){
+				p.selectionStart=l
+			}else{
+				p.select();
+			}
+			this.clickCount=0
+		}else if(event.button==2){
+			if(!gURLBar.plain){
+				gURLBar.layerManager.makePlain()
+				this.p.focus()
+			}
+			this.p.select()
+			if(event.button==2)
+				document.getAnonymousElementByAttribute(gURLBar.inputBox,'anonid','input-box-contextmenu').openPopup(null,1,event.clientX+1,event.clientY+1,true,true)
+		}else if(event.button==1){
+			openDialog('chrome://smarttext/content/options.xul','','centerscreen')
+		}
+	},
+
+	handleEvent: function (event) {
+	  switch (event.type) {
+		case "mousedown":
+			clearTimeout(this.clickCountTimer);
+			if(event.button!=0){
+				clickCount=0
+				return;
+			}
+			var p=this.p,l=p.value.length,e=event.rangeOffset;			
+			
+			var self=this;
+			//this.state=gURLBar.layerManager.elipsisMask.lastTarget.type
+			
+			this.clickCountTimer=window.setTimeout(function(){dump(self.clickCount,'timer');self.clickCount=0},this.DBL_CLICK_SPEED+100*Math.min(this.clickCount,3))
+			this.clickCount++
+			
+			var curpos=event.clientX+" "+event.clientY
+			dump(e,l,this.clickCount,curpos,this.lastPos)
+			if(e==l&&(this.clickCount!==1||curpos==this.lastPos)){
+				if(event.detail>1)this.stopEvent(event)				
+				if(p.selectionStart==l&&p.selectionEnd==l){				
+					p.selectionStart=0
+					this.ecbc=1			
+				}else if(p.selectionStart==0&&p.selectionEnd==l){
+					p.selectionStart=e
+					this.ecbc=2				
+				}
+			}else if(this.clickCount === 1){
+			   if(event.detail>1){
+					p.selectionStart=p.selectionEnd=e
+					this.stopEvent(event)
+			   }
+			}else if(p.selectionStart==0&&p.selectionEnd==l){
+				this.clickCount=0
+				p.selectionStart=p.selectionEnd=e
+				// this.ecbc=true
+				this.stopEvent(event)
+			}else{
+				if(this.clickCount === 3&&e==l)
+					p.select();
+				else
+					this.extend(p.selectionStart,p.selectionEnd)
+				this.stopEvent(event)
+			}
+			this.lastPos=curpos
+			break;			
+		case "mouseup":
+			//handle clicking at end
+			if(event.button==0&&this.ecbc){			   
+				this.p.selectionStart=(this.ecbc==1?0:event.rangeOffset)
+				this.ecbc=false 
+				this.clickCount=0
+			}
+			break;
+		}
+	},
+
+	selectAll: function (event) {
+		this.p.select()
+	},
+
+	DBL_CLICK_SPEED:400,
+	clickCount : 0,
+	clickCountTimer : null,
+
+	selectGroup:function(index){
+		var url=this.p.value
+		var i1= url.indexOf("://")
+		var i2= url.indexOf("/",i1+3)
+		var i3= url.indexOf("?",i2+1)
+		if(i3<0)
+			i3=url.length
+		var i4= url.indexOf("#",i2+1)
+		if(i4<0)
+			i4=url.length
+		o=[i1,i2,i3,i4]
+		if(index<i1){
+			this.p.setSelectionRange(0, i1);
+		}else if(index<i2){
+			this.p.setSelectionRange(i1, i2);
+		}else if(index<i3){
+			this.p.setSelectionRange(i2, i3);
+		}else if(index<i4){
+			this.p.setSelectionRange(i3, i4);
+		}
+	},
+
+	extend: function (s, e) {
+		var c="";
+		var p = this.p.value;
+		var index = (function (c, i) "_-: .=/&?#".indexOf(p.charAt(c), i));
+		var bound = Math.min(index(s - 1) || 100, index(e) || 100) + 1;
+
+		end = e;
+		while (index(end, bound) < 0) {
+			++end;
+			c = p.charAt(end);
+		}
+		end;
+		start = s - 1;
+		while (index(start, bound) < 0) {
+			--start;
+			c = p.charAt(start);
+		}
+		++start;
+		this.p.selectionStart = start;
+		this.p.selectionEnd = end;
+	}
+})]]></field>
+
+<field name="layerManager"><![CDATA[({
+	bar:this,
+	inputLayer: this.inputField.parentNode.parentNode,
+	smartLayer: this.smartText,
+	inputElement: this.inputField,
+	elipsisMask:document.getAnonymousElementByAttribute(this, "class", "elipsis-mask"),
+
+	containerElement: this.smartText.parentNode,
+	init: function(){
+		//adding class first time resets original class somewhy
+		this.inputLayer.className='textbox-input-box plain smart-text-input'
+		this.smartLayer.className='smart-text '
+
+		//
+		this.elipsisMask.addEventListener("mouseover",this.m1,true)
+		var l=this.elipsisMask.lastChild
+		l.type='left'
+		l.previousSibling.lastChild.type='top'
+
+		this.elipsisMask.lastTarget=l
+		//hide scrollbar onmouseover
+				var slf=this
+				this.containerElement.addEventListener("mouseover",
+				this.scrollHack=function(){	
+					slf.containerElement.removeEventListener("mouseover",slf.scrollHack,true)
+					slf.scrollPropertyadder()
+					delete slf.scrollHack					
+				},true)
+	},
+	makePretty: function(){
+		this.elipsisMask.style.display=""
+		this.smartLayer.style.display=""
+
+		var pstyle=this.inputLayer.style
+		pstyle.maxWidth="0"
+		//pstyle.visibility="hidden"
+
+		this.smartLayer.scrollLeft = this.inputElement.editor.rootElement.scrollLeft;
+		gURLBar.plain=false;
+	},
+	makePlain: function(){
+		this.elipsisMask.style.display="none"
+		var scrollLeft=this.smartLayer.scrollLeft
+		this.smartLayer.style.display="none"
+
+		var pstyle=this.inputLayer.style
+		pstyle.maxWidth=""
+		//pstyle.visibility=""
+
+		this.inputElement.editor.rootElement.scrollLeft = scrollLeft;
+		gURLBar.plain=true
+	},
+	synch: function(val){
+		var url=val
+		if(!url){
+			urlSplitter.emptySynch()
+			return true;
+		}try {
+			var uri = makeURI(url, null, null);
+			uri = (typeof uri.host != "undefined") ? uri : null;
+		}catch(e) {
+			uri = null;
+		}
+		if (!uri) {
+			this.bar.urlSplitter.simpleSynch(url);
+			return null;
+		}
+		this.bar.urlSplitter.synch(uri,url);
+		return true;
+	},
+	m1: function(e){
+		var [l1,l2]=[this.lastTarget,e.target]
+		var clist=gURLBar.plain? gURLBar.layerManager.inputLayer.classList:
+								 gURLBar.layerManager.smartLayer.classList;
+		l1.type&&clist.remove(l1.type)
+		l2.type&&clist.add(l2.type)
+
+		//l1.style.background=''
+		l1.style.pointerEvents='auto'
+
+		//l2.style.background='rgba(150,150,200,0.1)'
+		l2.style.pointerEvents='none'
+
+		this.lastTarget=l2
+	}
+	//hide scrollbar onmouseover
+			,scrollPropertyadder: function(){		
+				var u=document.createElement('scrollbar')
+				u.style.display='none'
+				document.documentElement.appendChild(u)
+				var domUtils=Components.classes["@mozilla.org/inspector/dom-utils;1"].getService(Components.interfaces.inIDOMUtils)
+				var inspectedRules=domUtils.getCSSStyleRules(u)
+
+				for(var i = 0; i < inspectedRules.Count(); ++i){
+					var rule = inspectedRules.GetElementAt(i)
+					var s=rule.parentStyleSheet
+					if(s.href=='chrome://global/content/xul.css'){
+						break
+					}
+				}
+				var cssRules=s.cssRules,csstext='.smart-text > scrollbar { display: none ! important; }'
+				for(i=s.cssRules.length-1;i>=0;--i)
+					if(cssRules[i].cssText==csstext)
+						break
+				if(i<0)
+					s.insertRule(csstext,s.cssRules.length)
+
+				this.smartLayer.style.overflowX='scroll'
+				u.parentNode.removeChild(u)
+				
+				return //
+				var findStylesheet=function(){
+					var href='chrome://smarttext/content/ce/urlbar.css'
+					var ss = window.document.styleSheets;
+					for (var i = ss.length - 1; i >= 0; i--){
+						var ahref=ss[i].href
+						if (ahref&& ahref.indexOf(href)>-1) 
+							return ss[i]    
+					}
+				}
+				var ss=findStylesheet().cssRules[0].cssRules
+				var csstext=''
+				for (var i = ss.length - 1; i >= 0; i--){      
+					  if (ss[i].selectorText.indexOf('div.anonymous-div')>-1) 
+					   csstext+=ss[i].style.cssText 
+					}
+				this.inputElement.editor.rootElement.style.cssText=csstext
+			}
+})]]></field>
+
+		</implementation>
+    <handlers>
+<handler event="focus"><![CDATA[
+	//if (this.hasAttribute("focused"))
+	//	return;
+	if (!this._focused && (event.originalTarget == this.inputField|| event.originalTarget == this)) {
+		this._focused = true;
+		this.inputField.focus()
+		if (!this.plain){
+			this.layerManager.makePlain();
+			this.plain=true
+		}
+	}
+	//this.setAttribute("focused", "true");
+]]></handler>
+<handler event="blur"><![CDATA[
+	if (!this.mIgnoreFocus&&this._focused) {
+		this._focused = false;
+		if(this.plain){
+			this.layerManager.synch(this.inputField.value)
+			this.layerManager.makePretty()
+		}
+	}
+]]></handler>
+	</handlers>
+		</binding>
+</bindings>

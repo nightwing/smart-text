@@ -1,0 +1,2 @@
+content smarttext content/
+style chrome://browser/content/browser.xul chrome://smarttext/content/ce/urlbar.css
