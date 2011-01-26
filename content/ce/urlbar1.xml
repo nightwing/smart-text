@@ -156,7 +156,7 @@
           }
         ]]></body>
       </method>
-	  
+
 	  <method name="setOverLink">
         <parameter name="aURL"/>
         <body><![CDATA[
@@ -505,6 +505,7 @@
 			this.downcoord=[event.clientX,event.clientY]
 			this.state=gURLBar.layerManager.elipsisMask.lastTarget.type
 			this.p1.addEventListener("mouseup", this, true);
+			this.p1.setCapture&&this.p1.setCapture(false)
 		}
 	}
 })]]> </field>
