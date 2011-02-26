@@ -9,3 +9,13 @@ url=gURLBar.value
     url = getShortcutOrURI(url, postData);
 
 postData.value
+
+getAboutUrls=function(){
+	var l="@mozilla.org/network/protocol/about;1?what=";
+	var ans=[];
+	for(var i in Cc)
+		if(i.indexOf(l)==0)
+			ans.push('about:'+i.substr(l.length))
+	return ans.sort()
+}
+getAboutUrls()

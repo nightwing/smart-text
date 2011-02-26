@@ -71,7 +71,7 @@
 					</xul:hbox>
 				</xul:stack>
 			</xul:hbox>
-			<xul:dropmarker anonid="historydropmarker" class="autocomplete-history-dropmarker" allowevents="true" xbl:inherits="open,enablehistory"/>
+			<xul:dropmarker anonid="historydropmarker" class="autocomplete-history-dropmarker urlbar-history-dropmarker" allowevents="true" xbl:inherits="open,enablehistory"/>
 			<children/>
 			<xul:popupset anonid="popupset" class="autocomplete-result-popupset"/>
 		</content>
@@ -424,6 +424,11 @@
 
 	selectFromRange: function () {
 		var selection = window.getSelection();
+		if(!selection.rangeCount){
+			this.moveSelectionToInputField()
+			return
+		}
+			
 		var range = selection.getRangeAt(0);
 		var sel = {start: {node: range.startContainer, offset: range.startOffset},
 					 end: {node: range.endContainer, offset: range.endOffset}};
@@ -496,15 +501,16 @@
 				}
 			}
 
-			this.p1.removeEventListener("mouseup", this, true);
+			window.removeEventListener("mouseup", this, true);
 		}else if(event.type=="mousedown"){
 			if(!this.p.value){
 				this.moveSelectionToInputField()
+				window.addEventListener("mouseup", this, true);
 				return
 			}
 			this.downcoord=[event.clientX,event.clientY]
 			this.state=gURLBar.layerManager.elipsisMask.lastTarget.type
-			this.p1.addEventListener("mouseup", this, true);
+			window.addEventListener("mouseup", this, true);
 			this.p1.setCapture&&this.p1.setCapture(false)
 		}
 	}

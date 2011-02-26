@@ -54,28 +54,7 @@
 		</hbox>
 	</vbox>
 </panel>
-<groupbox  align='stretch' id='stylish' style='display:none'>
- <caption label="stylish mode"/>
-	<vbox flex='1'>
-		<button id="" label="don't use stylish" oncommand="switchtoNormal()"/>	
-<textbox multiline="true" class="plain" style='min-height:70px'
-value="when uninstalling this extension uninstall 'style for smart-text' style as well.   
-now the version without stylish works as good as one with stylish, so ther's not much reason for using stylish mode
-"
-/>
-	</vbox>	
-</groupbox>
-<groupbox  align='stretch' id='normal'>
- <caption label=""/>
-	<vbox flex='1'>
-		<button id="switch-to-stylish" label="switch to stylish mode" oncommand="switchtoStylish()"/>
-<textbox multiline="true" class="plain" style='min-height:70px'
-value="now the version without stylish works as good as one with stylish, so ther's not much reason for using stylish mode
- the button above creates style named 'style for smart-text' 
-when uninstalling this extension uninstall that style as well"
-/>
-	</vbox>	
-</groupbox>
+
 
 
 
@@ -86,14 +65,61 @@ when uninstalling this extension uninstall that style as well"
 
 <script type="application/x-javascript">
   <![CDATA[	
-	
-var winService = Components.classes["@mozilla.org/appshell/window-mediator;1"].getService(Components.interfaces.nsIWindowMediator);
+reloadWin=function(silent){
+	if(window.opener&&window.opener.document){
+		window.opener.openDialog(styleURI,'','top='+screenY+',left='+screenX);
+		window.close()
+		return;
+	}
+	window.location.reload();	
+}
+/**********************************************************************/
+function getParserStyleSheet(){
+	var pss=document.getElementById('shadia-ParserStyleSheet')
+	if(!pss){
+		pss=document.createElementNS('http://www.w3.org/1999/xhtml','style')
+		pss.id='shadia-ParserStyleSheet'		
+		document.documentElement.appendChild(pss)
+		pss.sheet.disabled=true
+	}
+	return pss
+}
+//todo: charset rules
+function setCSSRules(sheet, rules){
+	var n=sheet.cssRules.length
+	//clear
+	for(var i=0; i<n; ++i)
+		sheet.deleteRule(0)
+	//copy
+	n=rules.length
+	for(var i=0; i<n; ++i)try{
+		sheet.insertRule(rules[i].cssText, i)
+	}catch(e){dump(rules[i].cssText,'--------------')}
+}  
+
+function reloadStyleSheet(styleSheet, styleCode){
+	styleCode=styleCode||makeReq(styleSheet.href)
+	var parser=getParserStyleSheet()
+	parser.textContent=styleCode
+	parser.sheet.disabled=true
+	var rules=parser.sheet.cssRules
+
+	setCSSRules(styleSheet, rules)
+	//fWins = Services.wm..getEnumerator('navigator:browser');
+	//while(fWins.hasMoreElements()){		
+	//}
+}
+/**********************************************************************/
+
+Components.utils.import("resource://gre/modules/Services.jsm");
+
+
 var styleURI="chrome://smarttext/content/options.xul";
 var aWin,stylishService
 gChange=false
 /**smart text specific*/
 function Init() {
-	var fWins = winService.getEnumerator('navigator:browser');
+	var fWins = Services.wm.getEnumerator('navigator:browser');
 	if(fWins.hasMoreElements()) {			
 		aWin=fWins.getNext()			
 	}else{
@@ -206,26 +232,22 @@ prepareStyle=function(){
 
 	getValuesFromUi(aWin);
 
-var styleBits={mainRule :
+var styleBits={
+	mainRule :
 '/**==technical stuff==**/\n\
-#urlbar {\n\
-  '+(
-  binding==bindingce?'-moz-binding: url("chrome://smarttext/content/ce/urlbar.xml#urlbar")':
-  '-moz-binding: url("chrome://smarttext/content/urlbar.xml#urlbar")')
-  +' !important;\n\
-}\n\
-\n\
-.smart-text>scrollbar {display:none!important}\n\
-\n\
-stsegment{\n\
-    -moz-user-focus: normal;\n\
-    -moz-user-select: text;\n\
-    white-space: pre;\n\
-    display:block;\n\
-}\n\
+#urlbar {'+
+	'-moz-binding: url("chrome://smarttext/content/ce/urlbar.xml#urlbar")!important;\
+}\
+.smart-text>scrollbar {display:none!important}\
+stsegment{\
+    -moz-user-focus: normal;\
+    -moz-user-select: text;\
+    white-space: pre;\
+    display:block;\
+}\
 .smart-text{\n\
    -moz-user-select: text;\n\
-   color:graytext;\n  '+(mode=='stylish'?'':'padding-left:1px\n')+
+   color:graytext;\n  padding-left:1px\n'+
 '}\n\
 \n\
 /**==top bottom==**/\n\
@@ -259,8 +281,7 @@ stsegment.querry{color:#717171}\n\
 .smart-text.left:hover{\n\
    color: #1A1A1A!important;\n\
 }\n\
-\n\
-'
+\n'
 	,sizeRule:
 '/**==sizes==**/\n\
 stsegment'+(mode=='stylish'?',.smart-text-input>div.anonymous-div':'')+'{\n\
@@ -315,293 +336,17 @@ $content$\n\
 }
 
 
-/**option win*/
-alertPanel=function(title,message,alerter){
-	var panel=document.getElementById("alertpanel");
-	var titlebox=document.getElementById("alert-p-title");
-	var textbox =document.getElementById("alert-p-text");
-	var but1 =document.getElementById("alert-p-1");
-	var but2 =document.getElementById("alert-p-2");
-	
-	titlebox.value=title;
-	textbox.value=message;
-	but1.onclick=function(){textbox.select()}
-	but2.onclick=function(){
-		const gClipboardHelper = Components.classes["@mozilla.org/widget/clipboardhelper;1"].  
-				getService(Components.interfaces.nsIClipboardHelper);  
-		gClipboardHelper.copyString(textbox.value);  
-		textbox.select();
-	}
-	//var bo=alerter.boxObject
-	//panel.showPopup(alerter,bo.screenX, bo.screenY+bo.height, 'popup')
-	panel.openPopup(alerter, "after_start", 0, 0, false, false);
-}
 
-reloadWin=function(silent){
-	if(window.opener.document){
-		window.opener.openDialog(styleURI,'','top='+screenY+',left='+screenX);
-		window.close()
-		return;
-	}
-	document.location=document.location;	
-}
-/**stylish*/
-removeStylihStyle=function(silent){
-	try{		
-		var uri = styleURI;
-		var style = aWin.stylishOverlay.service.findByUrl(uri,1)
-		style.delete()
-		if(!silent)alertPanel('"style for smart-text" successfully removed',/*"neet isn't it?:)"*/'',document.getElementById("stylish"))
-	}catch(e){
-		if(!silent)alertPanel('seems "style for smart-text"' ,'was already removed',document.getElementById("stylish"))
-	}
-}
-
-createStylihStyle=function(type){
-	binding=binding2
-	var styleCode=prepareStyle()
-	if(type=="compute"){
-		alertPanel('the style you chose :)',styleCode,document.getElementById("calculatebutton"));
-		return
-	}
-
-		var uri = styleURI;
-		var style = stylishService.findByUrl(uri,1)
-		if(!style){
-			style = Components.classes["@userstyles.org/style;1"].createInstance(Components.interfaces.stylishStyle);
-			style.mode = style.CALCULATE_META | style.REGISTER_STYLE_ON_CHANGE;
-			style.init(uri, uri, null, "style for smart-text", styleCode, false, "");
-		}
-		style.enabled=false
-		style.code=styleCode;
-		style.setPreview(false);
-		style.enabled=true
-		style.save()
-		//notify user
-		alertPanel('"style for smart-text" successfully installed',/*"neet isn't it?:)"*/'',document.getElementById("installbutton"))
-		//clear first run info
-
-
-	synchRemoveButton()
-}
-
-
-saveStylihStyle=function(){
-	
-		var uri = styleURI;
-		var style = stylishService.findByUrl(uri,1)
-		if(!style){
-			style = Components.classes["@userstyles.org/style;1"].createInstance(Components.interfaces.stylishStyle);
-			style.mode = style.CALCULATE_META | style.REGISTER_STYLE_ON_CHANGE;
-			style.init(uri, uri, null, "style for smart-text", styleCode, false, "");
-		}
-		style.enabled=false
-		style.code=styleCode;
-		style.setPreview(false);
-		style.enabled=true
-		style.save()
-		//notify user
-		//alertPanel('"style for smart-text" successfully installed',/*"neet isn't it?:)"*/'',document.getElementById("installbutton"))
-	
-}
-
-
-
-synchRemoveButton=function(style){return
-	if(typeof style=='undefined')try{
-		style = stylishService.findByUrl(styleURI,1)
-	}catch(e){}
-	var elem=document.getElementById("uninstallbutton").style
-	if(style){
-		elem.display=''
-	}else
-		elem.display='none'
-}
-
-/**css file*/
 /** ---------------------------------------**\
- | Basic Directory IO object based on JSLib |
- | source code found at jslib.mozdev.org    |
+ |                *  *  *                   |
+ |               * * * * *                  |
+ |                *  *  *                   |
 \**----------------------------------------**/
-var FileIO ={
-	localfileCID:  '@mozilla.org/file/local;1',
-	localfileIID:  Components.interfaces.nsILocalFile,
 
-	finstreamCID:  '@mozilla.org/network/file-input-stream;1',
-	finstreamIID:  Components.interfaces.nsIFileInputStream,
-
-	foutstreamCID: '@mozilla.org/network/file-output-stream;1',
-	foutstreamIID: Components.interfaces.nsIFileOutputStream,
-
-	sinstreamCID:  '@mozilla.org/scriptableinputstream;1',
-	sinstreamIID:  Components.interfaces.nsIScriptableInputStream,
-
-	suniconvCID:   '@mozilla.org/intl/scriptableunicodeconverter',
-	suniconvIID:    Components.interfaces.nsIScriptableUnicodeConverter,
-
-	open: function(path){
-		try{
-			var file = Components.classes[this.localfileCID].createInstance(this.localfileIID);
-			file.initWithPath(path);
-			return file;
-		}
-		catch(e){
-			return false;
-		}
-	},
-	read: function(file, charset){
-		try{
-			var data = new String();
-			var fiStream = Components.classes[this.finstreamCID].createInstance(this.finstreamIID);
-			var siStream = Components.classes[this.sinstreamCID].createInstance(this.sinstreamIID);
-			fiStream.init(file, 1, 0, false);
-			siStream.init(fiStream);
-			data += siStream.read(-1);
-			siStream.close();
-			fiStream.close();
-			if (charset){
-				data = this.toUnicode(charset, data);
-			}
-			return data;
-		} 
-		catch(e){
-			return false;
-		}
-	},
-
-	write: function(file, data, mode, charset){
-		try{
-			var foStream = Components.classes[this.foutstreamCID].createInstance(this.foutstreamIID);
-			if (charset){
-				data = this.fromUnicode(charset, data);
-			}
-			var flags = 0x02 | 0x08 | 0x20; // wronly | create | truncate
-			if (mode == 'a'){
-				flags = 0x02 | 0x10; // wronly | append
-			}
-			foStream.init(file, flags, 0664, 0);
-			foStream.write(data, data.length);
-			// foStream.flush();
-			foStream.close();
-			return true;
-		}
-		catch(e){
-			return false;
-		}
-	},
-
-	create: function(file){
-		try{
-			file.create(0x00, 0664);
-			return true;
-		}catch(e){
-			return false;
-		}
-	},
-
-	unlink: function(file){
-		try{
-			file.remove(false);
-			return true;
-		}catch(e){
-			return false;
-		}
-	},
-
-	path: function(file){
-		try{
-			return 'file:///' + file.path.replace(/\\/g, '\/').replace(/^\s*\/?/, '').replace(/\ /g, '%20');
-		}
-		catch(e){
-			return false;
-		}
-	},
-
-	toUnicode: function(charset, data){
-		try{
-			var uniConv = Components.classes[this.suniconvCID]
-								.createInstance(this.suniconvIID);
-			uniConv.charset = charset;
-			data = uniConv.ConvertToUnicode(data);
-		} 
-		catch(e){
-			// foobar!
-		}
-		return data;
-	},
-
-	fromUnicode: function(charset, data){
-		try{
-			var uniConv = Components.classes[this.suniconvCID]
-								.createInstance(this.suniconvIID);
-			uniConv.charset = charset;
-			data = uniConv.ConvertFromUnicode(data);
-			// data += uniConv.Finish();
-		}
-		catch(e){
-			// foobar!
-		}
-		return data;
-	},
-	
-	getWriteStream: function(file){
-		var stream = Components.classes["@mozilla.org/network/file-output-stream;1"].createInstance(Components.interfaces.nsIFileOutputStream);
-		stream.init(file, 0x02 | 0x08 | 0x20, 420, -1);
-		return stream;
-	}
-
-}
-
-//
-
-function chromeToPath (aPath) {
-   if (!aPath || !(/^chrome:/.test(aPath)))
-      return; //not a chrome url
-   var rv;
-   
-      var ios = Components.classes['@mozilla.org/network/io-service;1'].getService(Components.interfaces["nsIIOService"]);
-        var uri = ios.newURI(aPath, "UTF-8", null);
-        var cr = Components.classes['@mozilla.org/chrome/chrome-registry;1'].getService(Components.interfaces["nsIChromeRegistry"]);
-        rv = cr.convertChromeURL(uri).spec;
-
-        if (/^file:/.test(rv))
-          rv = this.urlToPath(rv);
-        else
-          rv = this.urlToPath("file://"+rv);
-
-      return rv;
-}
-
-function urlToPath (aPath) {
-
-    if (!aPath || !/^file:/.test(aPath))
-      return ;
-    var rv;
-   var ph = Components.classes["@mozilla.org/network/protocol;1?name=file"]
-        .createInstance(Components.interfaces.nsIFileProtocolHandler);
-    rv = ph.getFileFromURLSpec(aPath).path;
-    return rv;
-}
-
-var writeToFile = function(file,srcText){
-    if(!FileIO.write(destFile, srcText))   {
-       throw Error("Failed to copy " + srcFile.path + " to " + destFile.path);
-    }
-};
-
-saveStylesheetFile=function(text){	
-	try{
-		var fileurl = chromeToPath(stylePath);
-		var file1 = Components.classes["@mozilla.org/file/local;1"].createInstance(Components.interfaces.nsILocalFile);
-		file1.initWithPath(fileurl);
-		
-		FileIO.write(file1,text)
-	}catch(e){alert("unable to copy files, please report the bug")}
-}
 
 stylePath='chrome://smarttext/content/ce/urlbar.css'
 findStylesheet=function(awin,href){
-  var ss = awin.document.styleSheets;
+	var ss = awin.document.styleSheets;
     for (var i = ss.length - 1; i >= 0; i--){
       var ahref=ss[i].href
       if (ahref&& ahref.indexOf(href)>-1) 
@@ -625,7 +370,7 @@ apllyStylesheet1=function(styleCode){
 
 	//apply stylesheet changes to all windows
 	newStyles=newStylesheet.cssRules
-	fWins = winService.getEnumerator('navigator:browser');
+	fWins = Services.wm.getEnumerator('navigator:browser');
 	while(fWins.hasMoreElements()){
 		activeStylesheet=findStylesheet(fWins.getNext(),stylePath)
 		n=activeStylesheet.cssRules.length
@@ -651,42 +396,6 @@ findCurrentStylesheet=function(win){
 }
 
 
-switchtoStylish=function(){		
-	binding=binding2
-	mode='stylish'
-	try{
-		createStylihStyle('install')
-	}catch(e){	
-		synchMode();
-		return
-	}	
-	apllyStylesheet1('')
-	saveStylesheetFile('')
-	synchMode()
-	gChange=false
-}
-switchtoNormal=function(){	
-	mode='normal'
-	binding=bindingce
-	apllyStylesheet1()
-	saveStylesheetFile(styleCode)
-	removeStylihStyle('silent')
-	
-	synchMode()
-	gChange=false
-}
-
-findStylishStyleSheet=function(element,descriptiveCss){
-	var domUtils=Components.classes["@mozilla.org/inspector/dom-utils;1"].getService(Components.interfaces.inIDOMUtils)
-	var inspectedRules=domUtils.getCSSStyleRules(element)
-	for (var i = 0; i < inspectedRules.Count(); ++i){
-		var rule = inspectedRules.GetElementAt(i) 
-		if(rule.cssText.indexOf(binding2)>0||rule.cssText.indexOf(bindingce)>0){
-			var s=rule.parentStyleSheet
-			return s
-		}
-	}
-}
 stylishStylesheetCache=''
 apllyStylesheet2=function(styleCode){	
 	if(typeof styleCode=='undefined'){
@@ -719,7 +428,7 @@ apllyStylesheet2=function(styleCode){
 	
 		
 	//force reflow
-	fWins = winService.getEnumerator('navigator:browser');
+	fWins = Services.wm.getEnumerator('navigator:browser');
 	while(fWins.hasMoreElements()){
 		var win1=fWins.getNext().gURLBar.style//document.documentElement.style//
 		win1.display='none'
@@ -727,20 +436,8 @@ apllyStylesheet2=function(styleCode){
 	}
 }
 
-applyStyleSheet =function(){
-	if(mode=='stylish'){
-		apllyStylesheet2()
-	}else if(mode=='normal'){
-		apllyStylesheet1()
-	}
-}
-save =function(){
-	if(mode=='stylish'){
-		saveStylihStyle(styleCode)
-	}else if(mode=='normal'){
-		saveStylesheetFile(styleCode)
-	}
-}
+
+
 saveChanges=function(){if(gChange)save()}
 
 /***/
