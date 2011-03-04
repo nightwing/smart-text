@@ -21,25 +21,18 @@
 	<column flex="0"/>
 	<column flex="0"/>
 </columns>
-<rows flex="1" >
+<rows flex="1" id="optionGrid">
 	<row align="center">
 		<label>font size</label>
-		<textbox id="font-size" type="number" value="12" oncommand="applyStyleSheet()" onkeyup1='applyStyleSheet()'/><label>px</label>
+		<textbox id="fontSize" type="number" value="12" oncommand="applyStyleSheet()" onkeyup1='applyStyleSheet()'/><label>px</label>
 	</row>
 	<row align="center">
 		<label>urlbar height</label>
-		<textbox id="bar-height" type="number" value="24" oncommand="applyStyleSheet()"/><label>px</label>
+		<textbox id="barHeight" type="number" value="24" oncommand="applyStyleSheet()"/><label>px</label>
 	</row>
-	<row align="center">
-		<label>hide identity icon label</label>
-		<checkbox id="annoyance" oncommand="applyStyleSheet()"/><label> </label>
-	</row>
-	<row align="center">
-		<label>fission background</label>
-		<checkbox id="fission" oncommand="applyStyleSheet()"/><label> </label>
-	</row>
+
 	
-</rows >
+</rows>
 </grid>
 	
 	
@@ -105,9 +98,12 @@ function reloadStyleSheet(styleSheet, styleCode){
 	var rules=parser.sheet.cssRules
 
 	setCSSRules(styleSheet, rules)
-	//fWins = Services.wm..getEnumerator('navigator:browser');
-	//while(fWins.hasMoreElements()){		
-	//}
+	var fWins = Services.wm.getEnumerator('navigator:browser');
+	while(fWins.hasMoreElements()){		
+		var st = fWins.getNext().gURLBar.style
+		st.display='none'
+		st.display=''
+	}
 }
 /**********************************************************************/
 
@@ -115,7 +111,7 @@ Components.utils.import("resource://gre/modules/Services.jsm");
 
 
 var styleURI="chrome://smarttext/content/options.xul";
-var aWin,stylishService
+var aWin
 gChange=false
 /**smart text specific*/
 function Init() {
@@ -129,102 +125,72 @@ function Init() {
 		document.documentElement.appendChild(bu)
 		return;
 	}
-	try{
-		stylishService=aWin.stylishOverlay.service||
-			Components.classes["@userstyles.org/style;1"].getService(Components.interfaces.stylishStyle)
-		synchRemoveButton()		
-	}catch(e){}
-	
+
 	synchMode()
 	getStylesheet(aWin)
 	setUiValues2realValues()
 }
-getStylesheet=function(mWindow){
-	if(mode=='stylish'){
-		activeStylesheet=stylishStylesheetCache=
-			stylishStylesheetCache||findStylishStyleSheet(mWindow.gURLBar,binding2) 
-		return activeStylesheet
+/** dom helpers*/
+$=function(id){
+	document.getElementById(id)
+}
+function appendXML(element, xml){
+	var range = document.createRange()
+	range.selectNode(element)
+	range.collapse(true)
+	var fragment = range.createContextualFragment(xml)
+
+	element.appendChild(fragment)
+}
+formatString = function(string, options){	
+	return string.replace(/\$[^\$]*\$/g, function(x){
+		return options[x.slice(1,-1)]
+	})
+}
+addCheckboxes=function(config){
+	var xmlFrag = <row align="center">
+				<label>$descr$</label>
+				<checkbox id="$id$" oncommand="applyStyleSheet()"/><label> </label>
+			</row>.toXMLString()
+	
+	var xml = config.map(function(x){
+		if(x.type !='checkbox')
+			return
+		return formatString(xmlFrag, x)
+	})
+	appendXML($('optionGrid'), xml)
+}
+/**/
+config = [
+	{id:'fontSize', descr: '', type: 'number'},
+	{id:'barHeight', descr: '', type: 'number'},//TODO
+	{id:'hideIdentityLabel', descr: 'hide identity label', type: 'checkbox'},
+	{id:'progressmeter', descr: 'progressmeter background', type: 'checkbox'},
+	{id:'boldDomain', descr: 'bold domain', type: 'checkbox'},
+	{id:'hideHTTP', descr: 'hide "http://"', type: 'checkbox'},
+]
+optionsFromUi = function(options){
+	config.forEach(function(x){
+		options[x.id] = $(x.id)[x.type=='checkbox'?'value':'checked']
+		if(x.type=='number')
+			options[x.id] = parseInt(options[x.id])
+	})
+	
+	options.lineHeight = Math.ceil( options.fontSize*1.2 )	
+	options.padding=(options.barHeight-options.lineHeight)/2;
+	if(options.padding-Math.floor(options.padding)>0){
+		options.lineHeight--;
+		options.padding=(options.barHeight-options.lineHeight)/2;
 	}
-	
-	activeStylesheet=findStylesheet(mWindow,stylePath)
-	return activeStylesheet
 
+}
+optionsToUi = function(options){
+	config.forEach(function(x){
+		$(x.id)[x.type=='checkbox'?'value':'checked'] = options[x.id]
+	})
 }
 
 
-setUiValues2realValues=function(){
-	//barHeight=aWin.gURLBar.getBoundingClientRect().height-2
-	barHeight=parseInt(aWin.getComputedStyle(aWin.gURLBar,'').height)
-	
-	var st=aWin.getComputedStyle(aWin.gURLBar.inputField,"")
-	fontSize= parseInt(st.fontSize)
-	
-	var d=aWin.document.createElement("div")
-	d.textContent="5"
-	d.style.position='fixed'
-	d.style.fontSize=''+fontSize;
-	aWin.gURLBar.appendChild(d)
-	lineHeight=d.boxObject.height
-	aWin.gURLBar.removeChild(d)	
-	
-	padding=(barHeight-lineHeight)/2;
-	if(padding-Math.floor(padding)>0){
-		lineHeight--;
-		padding=(barHeight-lineHeight)/2;
-	}
-	//checkboxes
-	hideAnnoyance= findRuleInStyleSheet(activeStylesheet,'#identity-icon-label')
-	fissionBackground=findRuleInStyleSheet(activeStylesheet,'progressmeter > .progress-bar') 
-
-	
-	//set ui values
-	document.getElementById("bar-height").value = barHeight;
-	document.getElementById("font-size").value = fontSize;	
-	document.getElementById("annoyance").checked=hideAnnoyance
-	document.getElementById("fission").checked=fissionBackground
-}
-
-getValuesFromUi=function(aWin){
-	barHeight=parseInt(document.getElementById("bar-height").value);
-	fontSize=parseInt(document.getElementById("font-size").value);	
-	hideAnnoyance=document.getElementById("annoyance").checked
-	fissionBackground=document.getElementById("fission").checked
-	
-	var d=aWin.document.createElement("div")
-	d.textContent="5"
-	d.style.position='fixed'
-	d.style.fontSize=''+fontSize;
-	aWin.gURLBar.appendChild(d)
-
-	lineHeight=d.boxObject.height
-	aWin.gURLBar.removeChild(d)	
-	
-	padding=(barHeight-lineHeight)/2;
-	if(padding-Math.floor(padding)>0){
-		lineHeight--;
-		padding=(barHeight-lineHeight)/2;
-	}
-}
-
-bindingce='url("chrome://smarttext/content/ce/urlbar.xml#urlbar")'
-binding2='url("chrome://smarttext/content/urlbar.xml#urlbar")'
-synchMode=function(){
-	if(!stylishService){
-		document.getElementById('switch-to-stylish').setAttribute('disabled',true)
-	}else document.getElementById('switch-to-stylish').removeAttribute('disabled')
-	var asheet=findStylesheet(aWin,stylePath)
-	if(!stylishService||(asheet&&asheet.cssRules.length!=0)){
-		binding=bindingce
-		mode='normal'
-		document.getElementById('stylish').style.display='none'
-	    document.getElementById('normal').style.display=''
-		return
-	}	
-	binding=binding2
-	mode='stylish'
-	document.getElementById('stylish').style.display=''
-	document.getElementById('normal').style.display='none'
-}
 
 reset=false
 prepareStyle=function(){

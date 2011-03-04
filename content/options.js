@@ -12,12 +12,12 @@ function getCSSFile(){
 	return file
 }
 
-var cssFile=getCSSFile()
+var cssFile = getCSSFile()
 
 function updateStyle(register){
 	var sss= Cc["@mozilla.org/content/style-sheet-service;1"].getService(Ci.nsIStyleSheetService)
 
-	var uri=ios.newFileURI(cssFile), a=sss.AGENT_SHEET
+	var uri = ios.newFileURI(cssFile), a = sss.AGENT_SHEET
 	if(sss.sheetRegistered (uri,a))
 		sss.unregisterSheet(uri,a)
 	if(register)
@@ -45,22 +45,18 @@ function makeReq(href){
 }
 
 function createStyleFile(file){
-	var text
+	var text = compileCss(options)
 
-	var binding = makeReq(contentRoot+'urlbar.xml')
+	/*var binding = makeReq(contentRoot+'urlbar.xml')
 	var css = makeReq(contentRoot+'urlbar.css')
 	
-	var binding = "data:text/xml" + ";base64," + btoa(binding);
+	/*var binding = "data:text/xml" + ";base64," + btoa(binding);*/
 
-	text = css.replace( 'chrome://smarttext/content/ce/urlbar.xml#urlbar', binding )
-	writeToFile(file, text)
+	//text = css.replace( 'chrome://smarttext/content/ce/urlbar.xml#urlbar', binding )
+	writeToFile(cssFile, text)
 }
 
-if(!window.isSmartTextOptionsWindow){
-	createStyleFile(cssFile)
-	updateStyle(true)
-}
-
+/******************************************************************/
 var OP_COM='/**==',CL_COM='==**/'
 function getUserOptions(){
 	try{
@@ -71,24 +67,27 @@ function getUserOptions(){
 	}catch(e){}
 }
 
-var css = makeReq(contentRoot + 'urlbar.css')
-function()
-var cssFragments=css.split(OP_COM).map(function(x)x.split(CL_COM))
-cssFragments.shift()
-var defaultOptions=JSON.parse(fragments[0][0])
-cssFragments.shift()
+var css, cssFragmentMap, options
+function prepareCss(){
+	css = makeReq(contentRoot + 'urlbar.css')
 
-var options = getUserOptions() || defaultOptions
+	var cssFragments=css.split(OP_COM).map(function(x)x.split(CL_COM))
+	cssFragments.shift()
+	var defaultOptions=JSON.parse(fragments[0][0])
+	cssFragments.shift()
 
-var cssFragmentMap={default:''}
-cssFragments.forEach(function(x){
-	if(x[0][0]=='?')
-		cssFragmentMap[x[0].substr(1)]=x[1]
-	else
-		cssFragmentMap.default+=x[1]
-})
+	options = getUserOptions() || defaultOptions
 
-function reCompile(){
+	cssFragmentMap={default:''}
+	cssFragments.forEach(function(x){
+		if(x[0][0]=='?')
+			cssFragmentMap[x[0].substr(1)]=x[1]
+		else
+			cssFragmentMap.default+=x[1]
+	})
+}
+
+function compileCss(options){
 	var compiledCss=[OP_COM, JSON.stringify(options), CL_COM, '\n', options.docrule, '{']
 	for(var i in cssFragmentMap)
 		if(i=='default'||options[i])
@@ -102,5 +101,17 @@ function reCompile(){
 }
 
 
-
+/******************************************************************/
+prepareCss()
+if(!window.isSmartTextOptionsWindow){
+	//createStyleFile(cssFile)
+	options = getOptionsFromUI()
+	var text = compileCss(options)
+	writeToFile(cssFile, text)
+	updateStyle(true)
+}else{
+	window.options = options
+	window.compileCss = compileCss
+	
+}
 })()
