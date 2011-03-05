@@ -32,18 +32,6 @@ var xblLiveEdit = (function(){
 		else 
 			return "data:text/xml" + ";base64," + btoa(text);
 	}
-	function createStyleFile(file){	
-		writeToFile(file, getData())
-	}
-	function writeToFile(file, text){
-		var ostream = Cc["@mozilla.org/network/file-output-stream;1"].createInstance(Ci.nsIFileOutputStream);
-		ostream.init(file, 0x02 | 0x08 | 0x20, 0664, 0);
-
-		var converter = Cc["@mozilla.org/intl/converter-output-stream;1"].createInstance(Ci.nsIConverterOutputStream);
-		converter.init(ostream, "UTF-8", 4096, 0x0000);
-		converter.writeString(text);
-		converter.close();
-	}
 	function makeReq(href){
 		var req = new XMLHttpRequest;
 		req.overrideMimeType('text/plain')
@@ -57,10 +45,7 @@ var xblLiveEdit = (function(){
 	return {
 		update: function(){
 			updateStyle(true, true)
-		},
-		save: function(){
-			createStyleFile(stylefile)
-		}
+		}		
 	}
 })()
 //Components.utils.import("resource://gre/modules/Services.jsm");

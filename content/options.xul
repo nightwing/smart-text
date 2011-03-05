@@ -126,16 +126,16 @@ function Init() {
 		return;
 	}
 
-	synchMode()
-	getStylesheet(aWin)
-	setUiValues2realValues()
+	addCheckboxes(gConfig)
+	optionsFromUi(options)
 }
 /** dom helpers*/
 $=function(id){
-	document.getElementById(id)
+	return document.getElementById(id)
 }
 function appendXML(element, xml){
 	var range = document.createRange()
+	dump(range,element, xml)
 	range.selectNode(element)
 	range.collapse(true)
 	var fragment = range.createContextualFragment(xml)
@@ -158,10 +158,10 @@ addCheckboxes=function(config){
 			return
 		return formatString(xmlFrag, x)
 	})
-	appendXML($('optionGrid'), xml)
+	appendXML($('optionGrid'), xml.join(''))
 }
 /**/
-config = [
+gConfig = [
 	{id:'fontSize', descr: '', type: 'number'},
 	{id:'barHeight', descr: '', type: 'number'},//TODO
 	{id:'hideIdentityLabel', descr: 'hide identity label', type: 'checkbox'},
@@ -170,7 +170,7 @@ config = [
 	{id:'hideHTTP', descr: 'hide "http://"', type: 'checkbox'},
 ]
 optionsFromUi = function(options){
-	config.forEach(function(x){
+	gConfig.forEach(function(x){
 		options[x.id] = $(x.id)[x.type=='checkbox'?'value':'checked']
 		if(x.type=='number')
 			options[x.id] = parseInt(options[x.id])
@@ -426,6 +426,7 @@ findRuleInStyleSheet=function(styleSheet,text){
  ]]>
 </script>
 
+<script src='options.js'/>
 
 
 

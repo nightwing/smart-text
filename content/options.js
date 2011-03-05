@@ -73,10 +73,10 @@ function prepareCss(){
 
 	var cssFragments=css.split(OP_COM).map(function(x)x.split(CL_COM))
 	cssFragments.shift()
-	var defaultOptions=JSON.parse(fragments[0][0])
+	var defaultOptions=JSON.parse(cssFragments[0][0])
 	cssFragments.shift()
 
-	options = getUserOptions() || defaultOptions
+	options = getUserOptions() || defaultOptions || {}
 
 	cssFragmentMap={default:''}
 	cssFragments.forEach(function(x){
@@ -91,7 +91,7 @@ function compileCss(options){
 	var compiledCss=[OP_COM, JSON.stringify(options), CL_COM, '\n', options.docrule, '{']
 	for(var i in cssFragmentMap)
 		if(i=='default'||options[i])
-			ompiledCss.push(
+			compiledCss.push(
 				cssFragmentMap[i].replace(/\$[^\$]*\$/g, function(x){
 					return options[x.slice(1,-1)]
 				})
@@ -100,12 +100,23 @@ function compileCss(options){
 	return compiledCss.join('')
 }
 
+function getOptionsFromUI(){
+	var cs = window.getComputedStyle(gURLBar)
+	options.barHeight = cs.height
+	options.fontSize = cs.fontSize
+	options.lineHeight = Math.ceil( options.fontSize*1.2 )	
+	options.padding=(options.barHeight-options.lineHeight)/2;
+	if(options.padding-Math.floor(options.padding)>0){
+		options.lineHeight--;
+		options.padding=(options.barHeight-options.lineHeight)/2;
+	}
+}
 
 /******************************************************************/
 prepareCss()
-if(!window.isSmartTextOptionsWindow){
+if(window.location.href.indexOf(contentRoot)==-1){
 	//createStyleFile(cssFile)
-	options = getOptionsFromUI()
+	getOptionsFromUI(options)
 	var text = compileCss(options)
 	writeToFile(cssFile, text)
 	updateStyle(true)
