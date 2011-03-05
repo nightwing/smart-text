@@ -3,6 +3,7 @@
 
 var Cc = Components.classes;
 var Ci = Components.interfaces;
+var Cu = Components.utils;
 var ios = Cc["@mozilla.org/network/io-service;1"].getService(Ci.nsIIOService)
 var contentRoot = 'chrome://smarttext/content/'
 
@@ -13,6 +14,7 @@ function getCSSFile(){
 }
 
 var cssFile = getCSSFile()
+var cssFileURI = ios.newFileURI(cssFile)
 
 function updateStyle(register){
 	var sss= Cc["@mozilla.org/content/style-sheet-service;1"].getService(Ci.nsIStyleSheetService)
@@ -44,7 +46,7 @@ function makeReq(href){
 	return req.responseText;
 }
 
-function createStyleFile(file){
+function createStyleFile(){
 	var text = compileCss(options)
 
 	/*var binding = makeReq(contentRoot+'urlbar.xml')
@@ -60,23 +62,29 @@ function createStyleFile(file){
 var OP_COM='/**==',CL_COM='==**/'
 function getUserOptions(){
 	try{
-		var css = makeReq(ios.newFileURI(cssFile))
+		var css = makeReq(cssFileURI.spec)
 		var i = css.indexOf(CL_COM), j = css.indexOf(OP_COM)+OP_COM.length
 		css = css.substring(i,j)
 		return JSON.parse(css)
 	}catch(e){}
 }
-
-var css, cssFragmentMap, options
+function extend(a,b){
+	b=b||{}
+	for(var i in a){
+		b[i] = a[i]
+	}
+	return b
+}
+var css, cssFragmentMap, options, defaultOptions
 function prepareCss(){
 	css = makeReq(contentRoot + 'urlbar.css')
 
 	var cssFragments=css.split(OP_COM).map(function(x)x.split(CL_COM))
 	cssFragments.shift()
-	var defaultOptions=JSON.parse(cssFragments[0][0])
+	defaultOptions=JSON.parse(cssFragments[0][0])
 	cssFragments.shift()
 
-	options = getUserOptions() || defaultOptions || {}
+	options = getUserOptions() || extend(defaultOptions) || {}
 
 	cssFragmentMap={default:''}
 	cssFragments.forEach(function(x){
@@ -122,7 +130,16 @@ if(window.location.href.indexOf(contentRoot)==-1){
 	updateStyle(true)
 }else{
 	window.options = options
+	window.defaultOptions = defaultOptions
+	window.initialOptions = extend(options)
 	window.compileCss = compileCss
-	
+	window.updateStyle = updateStyle
+	window.makeReq = makeReq
+	window.save = createStyleFile
+	window.Cc = Cc
+	window.Ci = Ci
+	window.Cu = Cu
+	window.cssFileHref = cssFileURI.spec
+	window.cssFileURI = cssFileURI
 }
 })()

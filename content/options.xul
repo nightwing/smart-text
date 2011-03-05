@@ -13,7 +13,7 @@
 <prefpane id="locationbar2">
 <hbox>
 	<button flex='1' onclick="reloadWin()">reload</button>
-	<button flex='1' onclick="reset=true;applyStyleSheet();setUiValues2realValues()">reset</button>
+	<button flex='1' onclick="gModified=false;optionsToUi(initialOptions);applyStyleSheet()">reset</button>
 </hbox>
 <grid tooltiptext="configure appearence of urlbar">
 <columns>
@@ -37,35 +37,28 @@
 	
 	
 
-<panel id="alertpanel">
-	<vbox>
-		<label id="alert-p-title"/>			
-		<label multiline="true" id="alert-p-text"/>
-		<hbox style="display:none">
-			<button label="copy" id="alert-p-1"></button>
-			<button label="selectAll" id="alert-p-2"></button>
-		</hbox>
-	</vbox>
-</panel>
 
 
 
 
 <hbox>
-<spacer flex="10"/><button label="save" oncommand="window.close()"/>
+	<button label="liveXBLEdit" oncommand="toggleLiveXBLEditing()" type='checkbox'/>
+	<spacer flex="10"/>
+	<button label="save" oncommand="window.close()"/>
 </hbox>
 </prefpane>
 
-<script type="application/x-javascript">
-  <![CDATA[	
-reloadWin=function(silent){
+<script type="application/x-javascript"><![CDATA[
+reloadWin=function(){
 	if(window.opener&&window.opener.document){
-		window.opener.openDialog(styleURI,'','top='+screenY+',left='+screenX);
+		window.opener.openDialog(window.location.href,'','top='+screenY+',left='+screenX);
 		window.close()
 		return;
 	}
 	window.location.reload();	
 }
+]]></script>
+<script type="application/x-javascript"><![CDATA[	
 /**********************************************************************/
 function getParserStyleSheet(){
 	var pss=document.getElementById('shadia-ParserStyleSheet')
@@ -97,12 +90,61 @@ function reloadStyleSheet(styleSheet, styleCode){
 	parser.sheet.disabled=true
 	var rules=parser.sheet.cssRules
 
-	setCSSRules(styleSheet, rules)
-	var fWins = Services.wm.getEnumerator('navigator:browser');
-	while(fWins.hasMoreElements()){		
-		var st = fWins.getNext().gURLBar.style
-		st.display='none'
-		st.display=''
+	if(styleSheet.forEach)// array
+		styleSheet.forEach(function(styleSheet)setCSSRules(styleSheet, rules))
+	else 
+		setCSSRules(styleSheet, rules)
+}
+
+//findRuleInStyleSheet('#identity-icon-label')
+function findRuleInStyleSheet(styleSheet,text){	
+	function findRuleInCSSRules(cssRules){
+		for(var i=0;i<cssRules.length;i++){
+			var rule=cssRules[i]
+			if(rule.type===1){				
+				if(rule.selectorText.indexOf(text)>-1) return rule
+			}else if(rule.cssRules){
+				rule=findRuleInCSSRules(rule.cssRules)
+				if(rule) return rule
+			}
+		}
+		return;
+	}
+	return findRuleInCSSRules(styleSheet.cssRules)
+}
+
+findStyleSheetByUri = function(awin, href) {
+	if(getClass(awin).indexOf('window')==-1) {//find stylesheet by element
+		var domUtils=Cc["@mozilla.org/inspector/dom-utils;1"].getService(Ci.inIDOMUtils)
+		var inspectedRules=domUtils.getCSSStyleRules(awin)
+		for (var i = 0; i < inspectedRules.Count(); ++i){
+			var rule = inspectedRules.GetElementAt(i) 
+			if(rule.parentStyleSheet.href.indexOf(href)>-1){
+				return rule.parentStyleSheet
+			}
+		}
+	} else {
+		var ss = awin.document.styleSheets;
+		for (var i = ss.length - 1; i >= 0; i--){
+		   var ahref=ss[i].href
+		   if (ahref&& ahref.indexOf(href)>-1) 
+				return ss[i]    
+		}
+	}
+}
+
+function getClass(x) Object.prototype.toString.call(x).slice(8, -1);
+
+
+findStyleSheetByCss = function(element,descriptiveCss){
+	var domUtils=Cc["@mozilla.org/inspector/dom-utils;1"].getService(Ci.inIDOMUtils)
+	var inspectedRules=domUtils.getCSSStyleRules(element)
+	for (var i = 0; i < inspectedRules.Count(); ++i){
+		var rule = inspectedRules.GetElementAt(i) 
+		if(rule.cssText.indexOf(binding2)>0||rule.cssText.indexOf(bindingce)>0){
+			var s=rule.parentStyleSheet
+			return s
+		}
 	}
 }
 /**********************************************************************/
@@ -110,24 +152,25 @@ function reloadStyleSheet(styleSheet, styleCode){
 Components.utils.import("resource://gre/modules/Services.jsm");
 
 
-var styleURI="chrome://smarttext/content/options.xul";
-var aWin
-gChange=false
+var styleURI="chrome://smarttext/content/urlbar.css";
+window.__defineGetter__('aWin', function(){	
+	return Services.wm.getMostRecentWindow('navigator:browser')
+})
 /**smart text specific*/
 function Init() {
-	var fWins = Services.wm.getEnumerator('navigator:browser');
-	if(fWins.hasMoreElements()) {			
-		aWin=fWins.getNext()			
+	
+	if(aWin) {			
+		
 	}else{
 		var bu=document.createElement("button")
-		bu.setAttribute("onclick","Init()")
+		bu.setAttribute("onclick","this.parentNode.removeChild(this);Init()")
 		bu.setAttribute("label","no browser windows detected, try opening one")
 		document.documentElement.appendChild(bu)
 		return;
 	}
 
 	addCheckboxes(gConfig)
-	optionsFromUi(options)
+	optionsToUi(options)
 }
 /** dom helpers*/
 $=function(id){
@@ -171,134 +214,26 @@ gConfig = [
 ]
 optionsFromUi = function(options){
 	gConfig.forEach(function(x){
-		options[x.id] = $(x.id)[x.type=='checkbox'?'value':'checked']
+		options[x.id] = $(x.id)[x.type=='checkbox'?'checked':'value']
 		if(x.type=='number')
 			options[x.id] = parseInt(options[x.id])
 	})
 	
 	options.lineHeight = Math.ceil( options.fontSize*1.2 )	
+	if(options.barHeight < options.lineHeight)
+		options.barHeight = options.lineHeight
+	
 	options.padding=(options.barHeight-options.lineHeight)/2;
 	if(options.padding-Math.floor(options.padding)>0){
 		options.lineHeight--;
 		options.padding=(options.barHeight-options.lineHeight)/2;
 	}
-
+	
 }
 optionsToUi = function(options){
-	config.forEach(function(x){
-		$(x.id)[x.type=='checkbox'?'value':'checked'] = options[x.id]
+	gConfig.forEach(function(x){
+		$(x.id)[x.type=='checkbox'?'checked':'value'] = options[x.id]
 	})
-}
-
-
-
-reset=false
-prepareStyle=function(){
-	gChange=true
-
-	getValuesFromUi(aWin);
-
-var styleBits={
-	mainRule :
-'/**==technical stuff==**/\n\
-#urlbar {'+
-	'-moz-binding: url("chrome://smarttext/content/ce/urlbar.xml#urlbar")!important;\
-}\
-.smart-text>scrollbar {display:none!important}\
-stsegment{\
-    -moz-user-focus: normal;\
-    -moz-user-select: text;\
-    white-space: pre;\
-    display:block;\
-}\
-.smart-text{\n\
-   -moz-user-select: text;\n\
-   color:graytext;\n  padding-left:1px\n'+
-'}\n\
-\n\
-/**==top bottom==**/\n\
-.top>stsegment:hover{\n\
-   text-decoration: underline!important;\n\
-}\n\
-.smart-text.top{\n\
-   cursor:pointer;\n\
-}\n\
-.smart-text-input.top{\n\
-   cursor:alias;\n\
-}\n\
-/**==colors==**/\n\
-stsegment:hover{\n\
-   color: #1A1A1A!important;\n\
-}\n\
-.top>stsegment.subdomain:hover{\n\
-   text-decoration: line-through!important;\n\
-   color: darkblue!important;\n\
-}\n\
-stsegment.empty:hover{\n\
-   text-decoration: none!important;\n\
-   color:black!important;\n\
-}\n\
-stsegment.basedomain{color:black!important;}\n\
-stsegment.querry{color:#717171}\n\
-.smart-text-ellipsis:hover{\n\
-   text-shadow:-1px -1px 2px;\n\
-   color:blue\n\
-}\n\
-.smart-text.left:hover{\n\
-   color: #1A1A1A!important;\n\
-}\n\
-\n'
-	,sizeRule:
-'/**==sizes==**/\n\
-stsegment'+(mode=='stylish'?',.smart-text-input>div.anonymous-div':'')+'{\n\
-   padding:'+padding+'px 0px;\n\
-   line-height:'+lineHeight+'px;\n\
-}\n\
-\n\
-.smart-text-input,.urlbarAll {\n\
-  min-height:'+barHeight+'px;\n\
-  font-size:'+fontSize+'px!important;\n\
-}\n\
-\n\
-'
-    ,sizeRule2:
-'.urlbarAll {\n\
-  margin-left:3px!important;\n\
-}\n\
-'
-	,containerRule:
-'@-moz-document url("chrome://browser/content/browser.xul"){\n\
-\n\
-$content$\n\
-}'
-	,annoyingLabelRule:
-'#identity-icon-label{\n\
-  display:none\n\
-}'
-
-	,fissionBackground:
-'#urlbar progressmeter>.progress-bar {\n\
-   background:none!important;\n\
-   margin: 0 -18px -5px -6px !important;\n\
-  -moz-border-image: url("data:image/png;base64,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") 0 10 8 50 / 0 10px 8px 50px !important;\n\
-}'
-}
-
-	
-	styleCode=styleBits.mainRule
-	if(!reset)
-		styleCode+=styleBits.sizeRule
-	styleCode+=styleBits.sizeRule2
-	if(!reset&&hideAnnoyance)
-		styleCode+=styleBits.annoyingLabelRule;
-	if(!reset&&fissionBackground)
-		styleCode+=styleBits.fissionBackground;
-	
-	styleCode=styleBits.containerRule.replace("$content$",styleCode);	
-	
-	if(reset){setUiValues2realValues();reset=false}
-	
-	return styleCode
 }
 
 
@@ -309,126 +244,131 @@ $content$\n\
  |                *  *  *                   |
 \**----------------------------------------**/
 
+gModified = false
 
-stylePath='chrome://smarttext/content/ce/urlbar.css'
-findStylesheet=function(awin,href){
-	var ss = awin.document.styleSheets;
-    for (var i = ss.length - 1; i >= 0; i--){
-      var ahref=ss[i].href
-      if (ahref&& ahref.indexOf(href)>-1) 
-        return ss[i]    
-    }
-}
-
-apllyStylesheet1=function(styleCode){	
-	if(typeof styleCode=='undefined'){
-		binding=bindingce
-		styleCode=prepareStyle()
-	}
-	var pi=document.getElementById('pi')
-	if(! pi){
-		pi=document.createElementNS('http://www.w3.org/1999/xhtml','style')
-		pi.id='pi'		
-		document.documentElement.appendChild(pi)
-	}
-	pi.textContent=styleCode
-	newStylesheet=pi.sheet
-
+/*
+apllyStyleSheet=function(){
+	optionsFromUi(options)
+	var styleCode = compileCss(options)
+	
 	//apply stylesheet changes to all windows
-	newStyles=newStylesheet.cssRules
-	fWins = Services.wm.getEnumerator('navigator:browser');
+	var styleSheets=[]
+	var fWins = Services.wm.getEnumerator('navigator:browser');
 	while(fWins.hasMoreElements()){
-		activeStylesheet=findStylesheet(fWins.getNext(),stylePath)
-		n=activeStylesheet.cssRules.length
-		//clear
-		for(var i=0;i<n;++i)
-			activeStylesheet.deleteRule(0)
-		//copy		
-		n=newStyles.length
-		for(var i=0;i<n;++i)
-			activeStylesheet.insertRule(newStyles[i].cssText,i)
+		var activeStylesheet = findStyleSheetByUri(fWins.getNext(), styleURI)
+		styleSheets.push()
 	}
+	reloadStyleSheet(styleSheets, styleCode)
 }
+*/
 
-findCurrentStylesheet=function(win){
-	document.getElementById("skin")
-	activeStylesheet=findStylesheet(win,chromeSkinDir)
-	l=activeStylesheet.cssRules.length
-	for(var i =0;i<stylelengths.length;++i){
-		if(stylelengths[i][0]==l)
-		break
-	}
-	document.getElementById("skin").selectedIndex=i
-}
+applyStyleSheet=function(styleCode){
+	gModified = true
+	optionsFromUi(options)
+	var styleCode = compileCss(options)
+	UAstyleSheet = findStyleSheetByUri(aWin.gURLBar, cssFileHref)
+	reloadStyleSheet(UAstyleSheet, styleCode)
 
-
-stylishStylesheetCache=''
-apllyStylesheet2=function(styleCode){	
-	if(typeof styleCode=='undefined'){
-		binding=binding2
-		styleCode=prepareStyle()
-	}
-		
-	var pi=document.getElementById('pi')
-	if(! pi){
-		pi=document.createElementNS('http://www.w3.org/1999/xhtml','style')
-		pi.id='pi'		
-		document.documentElement.appendChild(pi)
-	}
-	pi.textContent=styleCode
-	newStylesheet=pi.sheet
-
-	//apply stylesheet changes to all windows
-	newStyles=newStylesheet.cssRules
-	
-	activeStylesheet=getStylesheet(aWin)
-	
-	n=activeStylesheet.cssRules.length
-	//clear
-	for(var i=0;i<n;++i)
-		activeStylesheet.deleteRule(0)
-	//copy		
-	n=newStyles.length
-	for(var i=0;i<n;++i)
-		activeStylesheet.insertRule(newStyles[i].cssText,i)	
-	
-		
-	//force reflow
-	fWins = Services.wm.getEnumerator('navigator:browser');
-	while(fWins.hasMoreElements()){
-		var win1=fWins.getNext().gURLBar.style//document.documentElement.style//
-		win1.display='none'
-		win1.display=''
+	//force redraw
+	var fWins = Services.wm.getEnumerator('navigator:browser');
+	while(fWins.hasMoreElements()){		
+		var sh=fWins.getNext().document.styleSheets[0]
+		sh.deleteRule(
+			sh.insertRule('*{}',sh.cssRules.length)
+		)
 	}
 }
 
 
 
-saveChanges=function(){if(gChange)save()}
+saveChanges=function(){
+	if(xblLiveEdit.activeWindow)
+		xblLiveEdit.finish()
+	else if(gModified)
+		save()
+}
 
 /***/
-//findRuleInStyleSheet('#identity-icon-label')
-findRuleInStyleSheet=function(styleSheet,text){	
-	function findRuleInCSSRules(cssRules){
-		for(var i=0;i<cssRules.length;i++){
-			var rule=cssRules[i]
-			if(rule.type===1){				
-				if(rule.selectorText.indexOf(text)>-1) return rule
-			}else if(rule.cssRules){
-				rule=findRuleInCSSRules(rule.cssRules)
-				if(rule) return rule
-			}
-		}
-		return;
-	}
-	return findRuleInCSSRules(styleSheet.cssRules)
-}
- ]]>
-</script>
+
+]]></script>
+
 
 <script src='options.js'/>
 
 
+<script type="application/x-javascript"><![CDATA[
+/**************************************\     //****************************************
+ *         **********  **********       \   //
+ *        **********    **********       \ //
+ * ********************************       V/    */
+toggleLiveXBLEditing=function(){
+	if(xblLiveEdit.activeWindow)
+		xblLiveEdit.finish()		
+	else{
+		xblLiveEdit.activeWindow = aWin
+		addActivatorToWindow(xblLiveEdit.activeWindow)
+		xblLiveEdit.activeWindow.focus()
+	}
+}
+var xblLiveEdit = (function(){
+	var ios = Cc["@mozilla.org/network/io-service;1"].getService(Ci.nsIIOService)
+	var sss = Cc["@mozilla.org/content/style-sheet-service;1"].getService(Ci.nsIStyleSheetService)
+	var rootPath = 'chrome://smarttext/content/'	
+	var activeURI = cssFileURI
+	
+	function updateStyle(register, useDataURI){		
+		var a=sss.AGENT_SHEET
+		
+		if(sss.sheetRegistered (activeURI,a))
+			sss.unregisterSheet(activeURI,a)
+		if(register){
+			activeURI = useDataURI? ios.newURI(getData(true), null, null) :cssFileURI;
+			sss.loadAndRegisterSheet(activeURI,a)
+		}
+	}
+	function getData(useDataURI){
+		var binding = makeReq(rootPath+'urlbar.xml')
+		var css = compileCss(options)
+		
+		var binding = "data:text/xml" + ";base64," + btoa(binding);
+		var text = css.replace( 'chrome://smarttext/content/urlbar.xml#urlbar', binding )
+		if(!useDataURI)
+			return text
+		else 
+			return "data:text/xml" + ";base64," + btoa(text);
+	}
+	
+	return {
+		update: function(){
+			updateStyle(true, true)
+		},
+		finish: function(){
+			updateStyle(true, false)
+			save()
+			this.activeWindow.activator.shutdown()
+			this.activeWindow = null
+		}
+	}
+})()
+addActivatorToWindow = function(window){
+	window.activator=window.activator||{
+		initialize:function(){
+			window.addEventListener('activate', this, false)
+		},
+		shutdown:function(){
+			window.removeEventListener('activate', this, false)
+		},
+		handleEvent: function(e){
+			this[e.type].forEach(function(x)x(e))	
+		},
+		activate: []
+	}
+	window.activator.activate=[function(){
+		xblLiveEdit.update()
+	}]
+	window.activator.initialize()
+}
+]]></script>
 
 
 

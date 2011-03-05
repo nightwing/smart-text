@@ -45,7 +45,10 @@ var xblLiveEdit = (function(){
 	return {
 		update: function(){
 			updateStyle(true, true)
-		}		
+		},
+		finish: function(){
+			
+		}
 	}
 })()
 //Components.utils.import("resource://gre/modules/Services.jsm");
