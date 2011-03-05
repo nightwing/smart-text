@@ -11,6 +11,9 @@ stsegment{
 	white-space: pre;
 	display:block;
 }
+stsegment.smart-text-end,stsegment.empty{
+	-moz-user-focus: ignore;
+}
 .smart-text{
 	-moz-user-select: text;
 	color:graytext;
@@ -52,11 +55,11 @@ stsegment{
 	padding: $padding$px 0px;
 	line-height: $lineHeight$px;
 }
-.smart-text-input,.urlbarAll {
+.smart-text-input,.st-layers {
 	min-height:$barHeight$px;
 	font-size:$fontSize$px!important;
 }
-.urlbarAll {
+.st-layers {
 	margin-left:3px!important;
 }
 /**==?hideIdentityLabel==**/

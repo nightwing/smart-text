@@ -302,13 +302,14 @@ saveChanges=function(){
  *        **********    **********       \ //
  * ********************************       V/    */
 toggleLiveXBLEditing=function(){
-	if(xblLiveEdit.activeWindow)
+	xblLiveEdit.update()
+	/*if(xblLiveEdit.activeWindow)
 		xblLiveEdit.finish()		
 	else{
 		xblLiveEdit.activeWindow = aWin
 		addActivatorToWindow(xblLiveEdit.activeWindow)
 		xblLiveEdit.activeWindow.focus()
-	}
+	}*/
 }
 var xblLiveEdit = (function(){
 	var ios = Cc["@mozilla.org/network/io-service;1"].getService(Ci.nsIIOService)
@@ -345,13 +346,13 @@ var xblLiveEdit = (function(){
 		finish: function(){
 			updateStyle(true, false)
 			save()
-			this.activeWindow.activator.shutdown()
-			this.activeWindow = null
+			/*this.activeWindow.activator.shutdown()
+			this.activeWindow = null*/
 		}
 	}
 })()
-addActivatorToWindow = function(window){
-	window.activator=window.activator||{
+addActivatorToWindow = function(window){	
+	/*window.activator=window.activator||{
 		initialize:function(){
 			window.addEventListener('activate', this, false)
 		},
@@ -366,7 +367,7 @@ addActivatorToWindow = function(window){
 	window.activator.activate=[function(){
 		xblLiveEdit.update()
 	}]
-	window.activator.initialize()
+	window.activator.initialize()*/
 }
 ]]></script>
 

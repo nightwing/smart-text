@@ -13,7 +13,7 @@
           xmlns:xul="http://www.mozilla.org/keymaster/gatekeeper/there.is.only.xul"
           xmlns:xbl="http://www.mozilla.org/xbl">
 	<binding id="urlbar" extends="chrome://browser/content/urlbarBindings.xml#urlbar" inheritstyle ="true">
-		<content sizetopopup="pref" fission="">
+		<content sizetopopup="pref">
 			<xul:hbox class="autocomplete-textbox-container" flex="1">
 				<children includes="image|deck|stack|box">
 					<xul:image class="autocomplete-icon" allowevents="true"/>
@@ -22,21 +22,9 @@
 					<children includes="progressmeter"/>
 					<xul:hbox class="autocomplete-textbox-container-fission" >
 <xul:stack flex="1" anonid="stack" class="urlbar-stack">
-          <xul:hbox class="urlbar-over-link-layer" flex="1"
-                         xbl:inherits="overlinkstate" align="center">
-            <xul:label anonid="origin-label" class="urlbar-origin-label" flex="1"
-                       crop="end"/>
-            <xul:hbox anonid="over-link-box" class="urlbar-over-link-box"
-                      xbl:inherits="overlinkstate" align="center">
-              <xul:label anonid="over-link-host-label"
-                         class="urlbar-over-link-host-label"/>
-              <xul:label anonid="over-link-path-label"
-                         class="urlbar-over-link-path-label" flex="1"/>
-            </xul:hbox>
-          </xul:hbox>
-
+          
 <xul:hbox flex="1" >
-<xul:hbox flex="1" class="urlbarAll" >
+<xul:hbox flex="1" class="st-layers" >
 	<xul:vbox flex="1" anonid="textbox-input-box" class="textbox-input-box plain " align="stretch">
 	   <xul:vbox anonid="textbox-input-box-inner" xbl:inherits="tooltiptext=inputtooltiptext"
 				 flex="1" >
@@ -46,8 +34,8 @@
 		</xul:vbox>
 	</xul:vbox>
 
-	<xul:hbox  anonid="smart-text-scroll" class="smart-text" flex="1"  style="overflow-x:hidden;display:none;" 
-				ondragover="gURLBar.layerManager.makePlain()"  ondragexit="nsDragAndDrop.dragExit(event, gURLBar);">
+	<xul:hbox  anonid="stsegment-layer" class="smart-text" flex="1"  style="overflow-x:hidden;display:none;" 
+			   ondragover="gURLBar.layerManager.makePlain()"  ondragexit="nsDragAndDrop.dragExit(event, gURLBar);">
 		<html:stsegment anonid="proto" class=""></html:stsegment>
 		<xul:stsegment anonid="proto" class="smart-text-end" flex="1"></xul:stsegment>
 	</xul:hbox>
@@ -57,6 +45,7 @@
 
 </xul:hbox>
 </xul:hbox>
+
 <xul:hbox flex="1" style='pointer-events:none' class="elipsis-mask" >
 	<xul:vbox flex='1' class='f' >
 		<xul:vbox  flex='3' style='pointer-events:auto'/>
@@ -80,7 +69,7 @@
     <implementation implements="nsIDOMEventListener, nsIObserver">
     <constructor><![CDATA[
 		this.urlSplitter.init()
-		this.selector.init()
+		this.selectionManager.init()
 		this.inputclicks.init()
 		this.layerManager.init()
 		this.clickSelectsAll=false
@@ -100,11 +89,8 @@
     <field name="inputBoxInner">
         document.getAnonymousElementByAttribute(this, "anonid", "textbox-input-box-inner");
       </field>
-    <field name="smartTextScroll">
-        document.getAnonymousElementByAttribute(this, "anonid", "smart-text-scroll");
-      </field>
-    <field name="smartText">
-        document.getAnonymousElementByAttribute(this, "anonid", "smart-text-scroll");
+    <field name="stsegmentLayer">
+        document.getAnonymousElementByAttribute(this, "anonid", "stsegment-layer");
     </field>
     <field name="_focused"/>
 	<field name="smartTextContainer" readonly="true">
@@ -177,7 +163,7 @@
     })]]></field>
 	
 <field name="urlSplitter"><![CDATA[({
-	smartTextContainer : this.smartTextScroll,
+	smartTextContainer : this.stsegmentLayer,
 	proto : null,	
 	p: this.inputField,
 	elemCount:0,
@@ -305,16 +291,16 @@
 	}
 })]]></field>
 
-<field name="selector"><![CDATA[({
-	p1: document.getAnonymousElementByAttribute(this, "anonid", "smart-text-scroll"),
-	p:document.getAnonymousElementByAttribute(this, "anonid", "input"),
+<field name="selectionManager"><![CDATA[({
+	p1: document.getAnonymousElementByAttribute(this, "anonid", "stsegment-layer"),
+	p: document.getAnonymousElementByAttribute(this, "anonid", "input"),
 	init: function(){
 		this.p.addEventListener("DOMMouseScroll", function(e){
 			if(e.ctrlKey){
 				if(this.scroll){
 					this.scroll=false
 					var text=this.value,offset=e.rangeOffset,st=this.selectionStart,en=this.selectionEnd
-					this.value=gURLBar.selector.scrollNumbers(text,offset,(e.detail>0?-1:1))
+					this.value=gURLBar.selectionManager.scrollNumbers(text,offset,(e.detail>0?-1:1))
 					this.selectionStart=st;this.selectionEnd=en
 				}else
 					this.scroll=true
@@ -328,7 +314,7 @@
 			if(e.ctrlKey){
 				if(this.scroll){
 					this.scroll=false
-					gURLBar.selector.scrollNumbersPretty(e)
+					gURLBar.selectionManager.scrollNumbersPretty(e)
 				}else
 					this.scroll=true
 				e.preventDefault();e.stopPropagation()
@@ -425,7 +411,7 @@
 	selectFromRange: function () {
 		var selection = window.getSelection();
 		if(!selection.rangeCount){
-			this.moveSelectionToInputField()
+			//this.moveSelectionToInputField()
 			return
 		}
 			
@@ -438,7 +424,7 @@
 			while (point.node.nodeType != 3 ){
 				var newNode = point.node.childNodes[point.offset]
 				while(!newNode){
-					if(point.node===gURLBar.selector.p1){
+					if(point.node===gURLBar.selectionManager.p1){
 						return ind[ind.length-1]
 					}else{newNode = point.node.nextSibling;}
 					if(!newNode)
@@ -470,47 +456,90 @@
 
 	moveSelectionToInputField: function(start,end){
 		gURLBar.layerManager.makePlain();
+		dump('before')
 		this.p.focus();
+		dump('before')
+		
 		if(typeof start!=="number"||typeof end!=="number")
 			this.p.select()
 		else this.p.setSelectionRange(start,end)
 	},
 	downcoord:[0,0],
-	handleEvent: function (event) {
-		if(event.type==="mouseup"){
-			if(event.button==2){
-				this.moveSelectionToInputField();
-				document.getAnonymousElementByAttribute(gURLBar.inputBox,'anonid','input-box-contextmenu').openPopup(null,1,event.clientX+1,event.clientY+1,true,true)
+	onMouseDown: function(event){
+		if(event.button==2){
+			this.moveSelectionToInputField();
+			document.getAnonymousElementByAttribute(gURLBar.inputBox,'anonid','input-box-contextmenu').openPopup(null,1,event.clientX+1,event.clientY+1,true,true)
+		}else{
+			var isSel=window.getSelection().toString()
+			var state=this.state
+			var moveLen=Math.abs(this.downcoord[0]-event.clientX)+Math.abs(this.downcoord[1]-event.clientY)
+			var cls=event.originalTarget.className
+			if(cls=='empty'&&state!='left'){
+				this.selectFromRange();
+			}else if(isSel||(state==undefined && cls!=="protocol"&&cls!=="smart-text-end")||( moveLen>10)){
+				this.selectFromRange();
+			}else if(state=='left'||cls==="smart-text-end"||(state=='top' && cls==="protocol")){
+				gURLBar.inputclicks.elipsisClick(event);
+			}else if(cls==="protocol"&&state==undefined){
+				this.selectFromElement(event.originalTarget)
+			}else if(state=='top' ){
+				this.openUri(event);
 			}else{
-				var isSel=window.getSelection().toString()
-				var state=this.state
-				var moveLen=Math.abs(this.downcoord[0]-event.clientX)+Math.abs(this.downcoord[1]-event.clientY)
-				var cls=event.originalTarget.className
-				if(cls=='empty'&&state!='left'){
-					this.selectFromRange();
-				}else if(isSel||(state==undefined && cls!=="protocol"&&cls!=="smart-text-end")||( moveLen>10)){
-					this.selectFromRange();
-				}else if(state=='left'||cls==="smart-text-end"||(state=='top' && cls==="protocol")){
-					gURLBar.inputclicks.elipsisClick(event);
-				}else if(cls==="protocol"&&state==undefined){
-					this.selectFromElement(event.originalTarget)
-				}else if(state=='top' ){
-					this.openUri(event);
-				}else{
-					this.selectFromRange();
-				}
+				this.selectFromRange();
 			}
-
+		}
+	},
+	onMouseUp: function(event){
+		if(event.button==2){
+			this.moveSelectionToInputField();
+			document.getAnonymousElementByAttribute(gURLBar.inputBox,'anonid','input-box-contextmenu').openPopup(null,1,event.clientX+1,event.clientY+1,true,true)
+		}else{
+			var isSel=window.getSelection().toString()
+			var state=this.state
+			var moveLen=Math.abs(this.downcoord[0]-event.clientX)+Math.abs(this.downcoord[1]-event.clientY)
+			var cls=event.originalTarget.className
+			if(cls=='empty'&&state!='left'){
+				this.selectFromRange();
+			}else if(isSel||(state==undefined && cls!=="protocol"&&cls!=="smart-text-end")||( moveLen>10)){
+				this.selectFromRange();
+			}else if(state=='left'||cls==="smart-text-end"||(state=='top' && cls==="protocol")){
+				gURLBar.inputclicks.elipsisClick(event);
+			}else if(cls==="protocol"&&state==undefined){
+				this.selectFromElement(event.originalTarget)
+			}else if(state=='top' ){
+				this.openUri(event);
+			}else{
+				this.selectFromRange();
+			}
+		}
+	},
+	handleEvent: function(event){
+		if(event.type==="mousemove"){
+			
+			var sel = window.getSelection()
+			sel.removeAllRanges()
+			this.range.setEnd(event.rangeParent, event.rangeOffset)
+			sel.addRange(this.range)
+			dump(event.rangeParent, event.rangeOffset, this.range.startOffset)
+		}else if(event.type==="mouseup"){
+			window.removeEventListener("mousemove", this, true);
 			window.removeEventListener("mouseup", this, true);
-		}else if(event.type=="mousedown"){
+			this.onMouseUp(event)			
+		}else if(event.type=="mousedown"){			
 			if(!this.p.value){
-				this.moveSelectionToInputField()
-				window.addEventListener("mouseup", this, true);
+				event.preventDefault()
+				this.moveSelectionToInputField()				
 				return
 			}
 			this.downcoord=[event.clientX,event.clientY]
 			this.state=gURLBar.layerManager.elipsisMask.lastTarget.type
+			
+			this.range = document.createRange();
+			this.range.setStart(event.rangeParent, event.rangeOffset)
+			
+			
 			window.addEventListener("mouseup", this, true);
+			window.addEventListener("mousemove", this, true);
 			this.p1.setCapture&&this.p1.setCapture(false)
 		}
 	}
@@ -665,11 +694,11 @@
 <field name="layerManager"><![CDATA[({
 	bar:this,
 	inputLayer: this.inputField.parentNode.parentNode,
-	smartLayer: this.smartText,
+	smartLayer: this.stsegmentLayer,
 	inputElement: this.inputField,
 	elipsisMask:document.getAnonymousElementByAttribute(this, "class", "elipsis-mask"),
 
-	containerElement: this.smartText.parentNode,
+	containerElement: this.stsegmentLayer.parentNode,
 	init: function(){
 		//adding class first time resets original class somewhy
 		this.inputLayer.className='textbox-input-box plain smart-text-input'
@@ -689,7 +718,6 @@
 
 		var pstyle=this.inputLayer.style
 		pstyle.maxWidth="0"
-		//pstyle.visibility="hidden"
 
 		this.smartLayer.scrollLeft = this.inputElement.editor.rootElement.scrollLeft;
 		gURLBar.plain=false;
@@ -746,6 +774,7 @@
 <handler event="focus"><![CDATA[
 	//if (this.hasAttribute("focused"))
 	//	return;
+	dump('--focus', this.mIgnoreFocus, this._focused, event.originalTarget)
 	if (!this._focused && (event.originalTarget == this.inputField|| event.originalTarget == this)) {
 		this._focused = true;
 		this.inputField.focus()
@@ -757,6 +786,7 @@
 	//this.setAttribute("focused", "true");
 ]]></handler>
 <handler event="blur"><![CDATA[
+	dump('--blur', this.mIgnoreFocus, this._focused, event.originalTarget)
 	if (!this.mIgnoreFocus&&this._focused) {
 		this._focused = false;
 		if(this.plain){
