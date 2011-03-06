@@ -77,7 +77,6 @@ stsegment.basedomain{
 	font-weight:bold;
 }
 /**==?hideHTTP==**/
-#urlbar progressmeter>.progress-bar {
-	background:none!important;
-	margin: 0 -18px -5px -6px !important;
+stsegment.www{
+	display:none
 }

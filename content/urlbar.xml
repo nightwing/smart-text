@@ -93,9 +93,9 @@
         document.getAnonymousElementByAttribute(this, "anonid", "stsegment-layer");
     </field>
     <field name="_focused"/>
-	<field name="smartTextContainer" readonly="true">
+	<!-- <field name="smartTextContainer" readonly="true">
         document.getAnonymousElementByAttribute(this, "anonid", "smart-text")
-    </field>
+    </field> -->
 
 
 
@@ -131,7 +131,7 @@
 	  <method name="handleEvent">
         <parameter name="aEvent"/>
         <body><![CDATA[
-          switch(aEvent.type){
+          /*switch(aEvent.type){
             case "mousedown":
               break;
             case "mousemove":
@@ -140,28 +140,10 @@
             case "mouseout":
               this._hideURLTooltip();
               break;
-          }
+          }*/
         ]]></body>
       </method>
-	  <method name="setOverLink">
-        <parameter name="aURL"/>
-        <body><![CDATA[
-		  
-        ]]></body>
-      </method><method name="_hideOverLink">
-        <parameter name="aURL"/>
-        <body><![CDATA[
-		  
-        ]]></body>
-      </method><method name="_updateOverLink">
-        <parameter name="aURL"/> 
-        <body><![CDATA[
-		  
-        ]]></body>
-      </method>  <field name="_overLinkBox" readonly="true"><![CDATA[({
-        addEventListener: function(){}
-    })]]></field>
-	
+	  	
 <field name="urlSplitter"><![CDATA[({
 	smartTextContainer : this.stsegmentLayer,
 	proto : null,	
@@ -173,6 +155,10 @@
 		var text=this.url.substring(is,ip)
 		if(!text)
 			return
+		if(className=="subdomain"&&text=='www')
+			className+=' www'
+		else if(className=="protocol"&&text=='http://')
+			className+=' www'
 		var el = this.proto.cloneNode(true);
 		el.index=this.elemCount;
 		el.textContent=text;
@@ -197,11 +183,14 @@
 	//dump("oooo",url,uri)
 		this.clear();
 		this.url=url;
+		var i1
 	//???????
 		/*url = losslessDecodeURI(url);*/
 	//create protocol node
 		this.inds=[0]
-		var i1= url.indexOf("://")+3
+		var i1= url.indexOf(":")+1
+		url[i1]=='/' && ++i1 && url[i1]=='/' && ++i1
+		dump(i1)
 		this.createElem("protocol",0,i1);
 	//look for subdomain
 		var host = uri.host, is=i1;
@@ -466,28 +455,7 @@
 	},
 	downcoord:[0,0],
 	onMouseDown: function(event){
-		if(event.button==2){
-			this.moveSelectionToInputField();
-			document.getAnonymousElementByAttribute(gURLBar.inputBox,'anonid','input-box-contextmenu').openPopup(null,1,event.clientX+1,event.clientY+1,true,true)
-		}else{
-			var isSel=window.getSelection().toString()
-			var state=this.state
-			var moveLen=Math.abs(this.downcoord[0]-event.clientX)+Math.abs(this.downcoord[1]-event.clientY)
-			var cls=event.originalTarget.className
-			if(cls=='empty'&&state!='left'){
-				this.selectFromRange();
-			}else if(isSel||(state==undefined && cls!=="protocol"&&cls!=="smart-text-end")||( moveLen>10)){
-				this.selectFromRange();
-			}else if(state=='left'||cls==="smart-text-end"||(state=='top' && cls==="protocol")){
-				gURLBar.inputclicks.elipsisClick(event);
-			}else if(cls==="protocol"&&state==undefined){
-				this.selectFromElement(event.originalTarget)
-			}else if(state=='top' ){
-				this.openUri(event);
-			}else{
-				this.selectFromRange();
-			}
-		}
+		
 	},
 	onMouseUp: function(event){
 		if(event.button==2){
@@ -515,12 +483,26 @@
 	},
 	handleEvent: function(event){
 		if(event.type==="mousemove"){
-			
+/*			r=document.createRange()
+r.setStart(gURLBar.stsegmentLayer.children[2].firstChild,2)
+r.setStart(gURLBar.stsegmentLayer.children[0].firstChild,1)
+
+//window.getSelection().addRange(r)
+
+rt=r.getBoundingClientRect()
+
+var brt=brt||gURLBar.stsegmentLayer.appendChild(document.createElement('div'))
+brt.style.cssText='position:fixed;background:red;z-index:1000;'+
+['left','top','width','height'].map(function(x)[x,':',rt[x],'px;'].join('')).join('')
+brt.style.cssText
+//shadia.inspect(brt)
+*/
 			var sel = window.getSelection()
 			sel.removeAllRanges()
 			this.range.setEnd(event.rangeParent, event.rangeOffset)
 			sel.addRange(this.range)
 			dump(event.rangeParent, event.rangeOffset, this.range.startOffset)
+			//event.preventDefault()
 		}else if(event.type==="mouseup"){
 			window.removeEventListener("mousemove", this, true);
 			window.removeEventListener("mouseup", this, true);
