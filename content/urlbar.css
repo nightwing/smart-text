@@ -4,18 +4,14 @@
 #urlbar {
 	-moz-binding: url("chrome://smarttext/content/urlbar.xml#urlbar") !important;
 }
-.smart-text>scrollbar {display:none!important}
+/* .smart-text>scrollbar {display:none!important} */
 stsegment{
-	-moz-user-focus: normal;
-	-moz-user-select: text;
+	/*-moz-user-focus: normal;
+	-moz-user-select: text;*/
 	white-space: pre;
 	display:block;
 }
-stsegment.smart-text-end,stsegment.empty{
-	-moz-user-focus: ignore;
-}
 .smart-text{
-	-moz-user-select: text;
 	color:graytext;
 	padding-left:1px;
 }

@@ -155,7 +155,7 @@
 		var text=this.url.substring(is,ip)
 		if(!text)
 			return
-		if(className=="subdomain"&&text=='www')
+		if(className=="subdomain"&&text=='www.')
 			className+=' www'
 		else if(className=="protocol"&&text=='http://')
 			className+=' www'
@@ -409,30 +409,12 @@
 					 end: {node: range.endContainer, offset: range.endOffset}};
 		var ind = gURLBar.urlSplitter.inds
 
-		function normalize(point,end) {
-			while (point.node.nodeType != 3 ){
-				var newNode = point.node.childNodes[point.offset]
-				while(!newNode){
-					if(point.node===gURLBar.selectionManager.p1){
-						return ind[ind.length-1]
-					}else{newNode = point.node.nextSibling;}
-					if(!newNode)
-						point.node = point.node.parentNode;
-				}
-				while(newNode.firstChild){
-					newNode = newNode.firstChild
-				}
-				point.node = newNode;
-			}
-			var i=point.node.parentNode.index
-			return  ind[i]+point.offset
-		}
 
 		var st = normalize(sel.start);
 		var en = normalize(sel.end);
 		this.moveSelectionToInputField(st, en);
 	},
-
+	
 	openUri: function(event){
 		var href=this.hrefFromElement(event.originalTarget)
 		var where = whereToOpenLink(event, false, true);
@@ -496,11 +478,20 @@ brt.style.cssText='position:fixed;background:red;z-index:1000;'+
 ['left','top','width','height'].map(function(x)[x,':',rt[x],'px;'].join('')).join('')
 brt.style.cssText
 //shadia.inspect(brt)
-*/
-			var sel = window.getSelection()
-			sel.removeAllRanges()
-			this.range.setEnd(event.rangeParent, event.rangeOffset)
-			sel.addRange(this.range)
+*/						
+			this.range.setStart(event.rangeParent, event.rangeOffset)
+			this.range.setStart(event.rangeParent, event.rangeOffset)
+			
+			b3 = this.range.getBoundingClientRect()
+			var w = b3.left-b1.left
+			if(w>0){
+				this.selection.style.width=w+'px'
+				this.selection.style.left=b1.left+'px'
+			}else{
+				this.selection.style.width=-w+'px'
+				this.selection.style.left=b3.left+'px'
+			}
+				
 			dump(event.rangeParent, event.rangeOffset, this.range.startOffset)
 			//event.preventDefault()
 		}else if(event.type==="mouseup"){
@@ -513,18 +504,45 @@ brt.style.cssText
 				this.moveSelectionToInputField()				
 				return
 			}
-			this.downcoord=[event.clientX,event.clientY]
-			this.state=gURLBar.layerManager.elipsisMask.lastTarget.type
+			this.downcoord = [event.clientX,event.clientY]
+			this.state = gURLBar.layerManager.elipsisMask.lastTarget.type
 			
 			this.range = document.createRange();
 			this.range.setStart(event.rangeParent, event.rangeOffset)
 			
+			this.st1=event.rangeParent
+			this.st2=event.rangeOffset
+			
+			b1 = this.range.getBoundingClientRect()
+			b2 = this.p1.getBoundingClientRect()
+			this.selection = this.p1.appendChild(document.createElement('stselection'))
+			this.selection.style.cssText = 'position:fixed;background:rgba(100,200,100,0.5);z-index:1000;'+
+				'left:'+(b1.left)+'px; height:'+b1.height+'px;width:1px;top:'+(b1.top)+'px;'
 			
 			window.addEventListener("mouseup", this, true);
 			window.addEventListener("mousemove", this, true);
 			this.p1.setCapture&&this.p1.setCapture(false)
 		}
-	}
+	},
+	
+	normalizeRange: function(point,end) {
+		while (point.node.nodeType != 3 ){
+			var newNode = point.node.childNodes[point.offset]
+			while(!newNode){
+				if(point.node===this.p1){
+					return ind[ind.length-1]
+				}else{newNode = point.node.nextSibling;}
+				if(!newNode)
+					point.node = point.node.parentNode;
+			}
+			while(newNode.firstChild){
+				newNode = newNode.firstChild
+			}
+			point.node = newNode;
+		}
+		var i=point.node.parentNode.index
+		return  ind[i]+point.offset
+	},
 })]]> </field>
 
 <field name="inputclicks"><![CDATA[({

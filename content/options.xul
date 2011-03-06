@@ -10,10 +10,11 @@
 		>
 		 <h:head><h:link rel="icon" href="chrome://smarttext/content/icon.png"/></h:head>
 
-<prefpane id="locationbar2">
+<prefpane>
 <hbox>
-	<button flex='1' onclick="reloadWin()">reload</button>
-	<button flex='1' onclick="gModified=false;optionsToUi(initialOptions);applyStyleSheet()">reset</button>
+	<button onclick="reloadWin()">reload</button>
+	<spacer flex='1'/>
+	<button onclick="gModified=false;optionsToUi(initialOptions);applyStyleSheet()">reset</button>
 </hbox>
 <grid tooltiptext="configure appearence of urlbar">
 <columns>
@@ -42,7 +43,8 @@
 
 
 <hbox>
-	<button label="liveXBLEdit" oncommand="toggleLiveXBLEditing()" type='checkbox'/>
+	<button label="liveEditXBL" oncommand="toggleLiveXBLEditing()" 
+	tooltiptext='reload urlbar.xml (:for developers:)'/>
 	<spacer flex="10"/>
 	<button label="save" oncommand="window.close()"/>
 </hbox>
@@ -51,7 +53,10 @@
 <script type="application/x-javascript"><![CDATA[
 reloadWin=function(){
 	if(window.opener&&window.opener.document){
-		window.opener.openDialog(window.location.href,'','top='+screenY+',left='+screenX);
+		//window.opener.openDialog(window.location.href,'','top='+screenY+',left='+screenX);
+		window.opener.open(window.location.href, "_blank", 
+			"chrome,extrachrome,resizable," + /*"centerscreen"+*/
+			'top=' + screenY + ',left=' + screenX).focus();
 		window.close()
 		return;
 	}
@@ -342,10 +347,14 @@ var xblLiveEdit = (function(){
 	return {
 		update: function(){
 			updateStyle(true, true)
+			with(aWin){
+				gURLBar.value=gBrowser.userTypedValue||gBrowser.mCurrentBrowser.lastURI.spec
+			}
 		},
 		finish: function(){
 			updateStyle(true, false)
 			save()
+			this.activeWindow = null
 			/*this.activeWindow.activator.shutdown()
 			this.activeWindow = null*/
 		}
