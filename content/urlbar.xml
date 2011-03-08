@@ -34,11 +34,9 @@
 		</xul:vbox>
 	</xul:vbox>
 
-	<xul:hbox  anonid="stsegment-layer" class="smart-text" flex="1"  style="overflow-x:hidden;display:none;" 
-			   ondragover="gURLBar.layerManager.makePlain()"  ondragexit="nsDragAndDrop.dragExit(event, gURLBar);">
-		<html:stsegment anonid="proto" class=""></html:stsegment>
-		<xul:stsegment anonid="proto" class="smart-text-end" flex="1"></xul:stsegment>
-	</xul:hbox>
+	<html:hbox  anonid="stsegment-layer" class="smart-text" flex="1"  style="display:none;" 
+		ondragover="gURLBar.layerManager.makePlain()"  ondragexit="nsDragAndDrop.dragExit(event, gURLBar);"/>
+	
 
 	<xul:box anonid="overflow-ellipsis" class="smart-text-ellipsis" onclick="gURLBar.inputclicks.elipsisClick(event);"
 				style="-moz-user-select:none;-moz-box-align:center" ><html:div>...</html:div></xul:box>
@@ -146,9 +144,74 @@
 	  	
 <field name="urlSplitter"><![CDATA[({
 	smartTextContainer : this.stsegmentLayer,
-	proto : null,	
-	p: this.inputField,
 	elemCount:0,
+	tokenList:[],
+	setInnerHTML: function(tokenList){
+		var div = document.createElementNS('http://www.w3.org/1999/xhtml','div')
+		div.className = 'smart-text'
+		var html = []
+		;(tokenList||this.tokenList).forEach(function(x){			
+			html.push(
+				'<stsegment class="', x.class, '">', 
+					x.text.replace(/[<&]/g, function(str) {return str == "&" ? "&amp;" : "&lt;";}),
+				'</stsegment>' 
+			)
+		})
+		div.innerHTML = html.join('')
+		var el=this.smartTextContainer
+		while (el.hasChildNodes())
+			el.removeChild(el.lastChild);
+		el.appendChild(div)
+	},
+	getMarkedTokenList: function(st, en){
+		var newList = [], i=0, pt = this.tokenList[i]
+		while(pt.endpos <= st){		
+			newList.push(pt)
+			pt = this.tokenList[++i]
+		}
+		
+		this.tokenList=gURLBar.urlSplitter.tokenList
+
+this.tokenList=gURLBar.urlSplitter.tokenList
+
+st=34;en=47
+function sub(pt, sel, a, b){
+	var fr = pt.text.substring(a,b)
+	if(fr)
+		newList.push({text:fr,class: pt.class+(sel?' selected':'')})
+}
+var newList = [], i=0, pt = this.tokenList[i], lastPos=0
+while(pt && pt.endPos <= st){		
+	sub(pt, false)
+	lastPos = pt.endPos
+	pt = this.tokenList[++i]
+}
+
+
+var st1=st-lastPos,en1=en-lastPos
+sub(pt, false, 0, st1)
+if(en<pt.endPos){
+	sub(pt, true, st1, en1)
+	sub(pt, false, en1)
+}else{
+	sub(pt, true, st1)
+}
+
+pt = this.tokenList[++i]
+while(pt && pt.endPos <= en){		
+	sub(pt, true)
+ /* lastPos=pt.endPos*/
+	pt = this.tokenList[++i]
+}
+while(pt){
+	sub(pt, false)
+	pt = this.tokenList[++i]
+}
+		
+	},
+	htmlEscape: function(str){
+		return str.replace(/[<&]/g, function(str) {return str == "&" ? "&amp;" : "&lt;";});
+	},
 	createElem:function(className,is,ip){
 		if(ip<=is)
 			return
@@ -159,24 +222,22 @@
 			className+=' www'
 		else if(className=="protocol"&&text=='http://')
 			className+=' www'
-		var el = this.proto.cloneNode(true);
-		el.index=this.elemCount;
-		el.textContent=text;
-		el.setAttribute("class",className);
-		this.smartTextContainer.appendChild(el);
+		this.tokenList.push({
+			index: this.elemCount,
+			text: text,
+			class: className,
+			endPos: ip
+		})
 		this.elemCount++;
 		this.inds.push(ip)
 	},
 
 	clear : function(){
 		this.elemCount=0
-		var el=this.smartTextContainer
-		while (el.hasChildNodes())
-			el.removeChild(el.lastChild);
+		this.tokenList=[]		
 	},
 	init: function(){
-		this.proto = this.smartTextContainer.removeChild(this.smartTextContainer.firstChild)
-		this.endnode = this.smartTextContainer.removeChild(this.smartTextContainer.firstChild);
+		//this.smartTextContainer.appendChild(this.smartTextContainer.cloneNode(false))
 	},
 
 	synch: function(uri,url){
@@ -251,9 +312,14 @@
 			this.createElem("index",i4,url.length);
 		}
 
-	//append flex at end
-		this.smartTextContainer.appendChild(this.endnode);
-		this.endnode.index=(++this.elemCount)
+	//append flex at end		
+		this.tokenList.push({
+			index: ++this.elemCount,
+			text: '',
+			class: "smart-text-end",
+			startPos: url.length
+		})
+		this.setInnerHTML()
 	//keep scrolled element visible
 		var pn=this.smartTextContainer
 		if(pn.scrollLeft+pn.clientWidth > pn.scrollWidth)
@@ -265,8 +331,13 @@
 		this.url=url
 		this.createElem("empty",0,this.url.length);
 	//append flex at end
-		this.smartTextContainer.appendChild(this.endnode);
-		this.endnode.index=(++this.elemCount)
+		this.tokenList.push({
+			index: ++this.elemCount,
+			text: '',
+			class: "smart-text-end",
+			startPos: url.length
+		})
+		this.setInnerHTML()
 	//keep scrolled element visible
 		var pn=this.smartTextContainer
 		if(pn.scrollLeft+pn.clientWidth > pn.scrollWidth)
@@ -277,6 +348,7 @@
 		this.clear();
 		this.url=gURLBar.emptyText||gURLBar.getAttribute('placeholder')
 		this.createElem("empty",0,this.url.length);
+		this.setInnerHTML()
 	}
 })]]></field>
 
@@ -398,20 +470,14 @@
 	},
 
 	selectFromRange: function () {
-		var selection = window.getSelection();
-		if(!selection.rangeCount){
-			//this.moveSelectionToInputField()
-			return
-		}
-			
-		var range = selection.getRangeAt(0);
-		var sel = {start: {node: range.startContainer, offset: range.startOffset},
-					 end: {node: range.endContainer, offset: range.endOffset}};
 		var ind = gURLBar.urlSplitter.inds
-
-
-		var st = normalize(sel.start);
-		var en = normalize(sel.end);
+		var st = ind[this.anchor.node.parentNode.index] + this.anchor.offset
+		var en = ind[this.focus.node.parentNode.index] + this.focus.offset
+		if(st>en){
+			var st1 = st
+			st=en
+			en=st1
+		}
 		this.moveSelectionToInputField(st, en);
 	},
 	
@@ -463,60 +529,54 @@
 			}
 		}
 	},
-	handleEvent: function(event){
-		if(event.type==="mousemove"){
-/*			r=document.createRange()
-r.setStart(gURLBar.stsegmentLayer.children[2].firstChild,2)
-r.setStart(gURLBar.stsegmentLayer.children[0].firstChild,1)
 
-//window.getSelection().addRange(r)
-
-rt=r.getBoundingClientRect()
-
-var brt=brt||gURLBar.stsegmentLayer.appendChild(document.createElement('div'))
-brt.style.cssText='position:fixed;background:red;z-index:1000;'+
-['left','top','width','height'].map(function(x)[x,':',rt[x],'px;'].join('')).join('')
-brt.style.cssText
-//shadia.inspect(brt)
-*/						
-			this.range.setStart(event.rangeParent, event.rangeOffset)
-			this.range.setStart(event.rangeParent, event.rangeOffset)
+	handleEvent: function(e){
+		if(e.type==="mousemove"){
+			this.focus = this.getEventPoint(e)	
 			
-			b3 = this.range.getBoundingClientRect()
-			var w = b3.left-b1.left
+			var focusRect = this.range.getBoundingClientRect()
+			var w = focusRect.left-b1.left
+			
+			
+
 			if(w>0){
 				this.selection.style.width=w+'px'
 				this.selection.style.left=b1.left+'px'
-			}else{
+			}else if(w<0){
 				this.selection.style.width=-w+'px'
-				this.selection.style.left=b3.left+'px'
+				this.selection.style.left=focusRect.left+'px'
+			}else{
+				var moveLen=Math.abs(this.downcoord[1]-e.clientY)
+				if(moveLen>2)
+					w=1
+				this.selection.style.width=w+'px'
+				this.selection.style.left=focusRect.left+'px'
 			}
 				
-			dump(event.rangeParent, event.rangeOffset, this.range.startOffset)
+			dump(e.rangeParent, e.rangeOffset, this.range.startOffset, this.offsetFromStart(e.rangeParent, e.rangeOffset))
 			//event.preventDefault()
-		}else if(event.type==="mouseup"){
+		}else if(e.type==="mouseup"){
 			window.removeEventListener("mousemove", this, true);
 			window.removeEventListener("mouseup", this, true);
-			this.onMouseUp(event)			
-		}else if(event.type=="mousedown"){			
+			this.range = null
+			this.onMouseUp(e)			
+		}else if(e.type=="mousedown"){
 			if(!this.p.value){
-				event.preventDefault()
+				e.preventDefault()
 				this.moveSelectionToInputField()				
 				return
 			}
-			this.downcoord = [event.clientX,event.clientY]
+			this.downcoord = [e.clientX,e.clientY]
 			this.state = gURLBar.layerManager.elipsisMask.lastTarget.type
 			
 			this.range = document.createRange();
-			this.range.setStart(event.rangeParent, event.rangeOffset)
 			
-			this.st1=event.rangeParent
-			this.st2=event.rangeOffset
+			this.anchor = this.getEventPoint(e)			
 			
 			b1 = this.range.getBoundingClientRect()
 			b2 = this.p1.getBoundingClientRect()
 			this.selection = this.p1.appendChild(document.createElement('stselection'))
-			this.selection.style.cssText = 'position:fixed;background:rgba(100,200,100,0.5);z-index:1000;'+
+			this.selection.style.cssText = 'position:fixed;background:rgba(100,200,100,0.5);z-index:-1;pointer-events:none'+
 				'left:'+(b1.left)+'px; height:'+b1.height+'px;width:1px;top:'+(b1.top)+'px;'
 			
 			window.addEventListener("mouseup", this, true);
@@ -525,13 +585,22 @@ brt.style.cssText
 		}
 	},
 	
-	normalizeRange: function(point,end) {
+	normalizePoint: function(point) {
 		while (point.node.nodeType != 3 ){
 			var newNode = point.node.childNodes[point.offset]
 			while(!newNode){
-				if(point.node===this.p1){
-					return ind[ind.length-1]
-				}else{newNode = point.node.nextSibling;}
+				if(point.node === this.p1){
+					//only this requires shallow dom structure
+					point.node = this.p1.lastChild
+					while (!point.node.lastChild||point.node.lastChild.nodeType != 3 ){
+						point.node = point.node.previousSibling
+					}
+					point.node = point.node.lastChild
+					point.offset = point.node.length
+					return point
+				}else{
+					newNode = point.node.nextSibling;
+				}
 				if(!newNode)
 					point.node = point.node.parentNode;
 			}
@@ -539,10 +608,62 @@ brt.style.cssText
 				newNode = newNode.firstChild
 			}
 			point.node = newNode;
+			point.offset = 0
 		}
-		var i=point.node.parentNode.index
-		return  ind[i]+point.offset
+		return  point
 	},
+	getEventPoint: function(e){
+		var point = this.normalizePoint({node: e.rangeParent, offset: e.rangeOffset})
+		this.range.setStart(point.node, point.offset)
+		this.range.setStart(point.node, point.offset)
+		return point
+	},
+	
+
+	offsetFromStart: function(node, offset) {
+		function getLength(node){
+			if(!node)
+				return 0;
+			if(node.nodeType == 3 )
+				return node.length
+			var ch=node.childNodes
+			if(!ch)
+				return 0;
+			var l=0,n=ch.length, i=0
+			for(i=0;i<n;i++)
+				l+=getLength(ch[i])
+			return l
+		}
+		
+		function getLength2(node, offset){
+			if(!node || !offset)
+				return 0;
+			if(node.nodeType == 3 )
+				return offset
+			var ch = node.childNodes
+			if(!ch)
+				return 0;
+			var l=0,n=offset, i=0
+			for(i=0;i<n;i++)
+				l+=getLength(ch[i])
+			return l
+		}
+		
+		var l = getLength2(node, offset)
+		
+		
+		while(node && node !== this.p1){
+			var newNode = node.previousSibling
+			while(newNode){
+				l+=getLength(newNode)
+				newNode = newNode.previousSibling
+			}
+			node = node.parentNode;
+		}
+		
+		
+		return  l
+	}
 })]]> </field>
 
 <field name="inputclicks"><![CDATA[({
@@ -656,7 +777,7 @@ brt.style.cssText
 		var i4= url.indexOf("#",i2+1)
 		if(i4<0)
 			i4=url.length
-		o=[i1,i2,i3,i4]
+
 		if(index<i1){
 			this.p.setSelectionRange(0, i1);
 		}else if(index<i2){
@@ -774,19 +895,20 @@ brt.style.cssText
 <handler event="focus"><![CDATA[
 	//if (this.hasAttribute("focused"))
 	//	return;
-	dump('--focus', this.mIgnoreFocus, this._focused, event.originalTarget)
+	//dump('--focus', this.mIgnoreFocus, this._focused, event.originalTarget)
 	if (!this._focused && (event.originalTarget == this.inputField|| event.originalTarget == this)) {
 		this._focused = true;
 		this.inputField.focus()
 		if (!this.plain){
 			this.layerManager.makePlain();
+			this.inputField.select()
 			this.plain=true
 		}
 	}
 	//this.setAttribute("focused", "true");
 ]]></handler>
 <handler event="blur"><![CDATA[
-	dump('--blur', this.mIgnoreFocus, this._focused, event.originalTarget)
+	//dump('--blur', this.mIgnoreFocus, this._focused, event.originalTarget)
 	if (!this.mIgnoreFocus&&this._focused) {
 		this._focused = false;
 		if(this.plain){

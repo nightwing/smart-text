@@ -84,7 +84,7 @@ function prepareCss(){
 	defaultOptions=JSON.parse(cssFragments[0][0])
 	cssFragments.shift()
 
-	options = getUserOptions() || extend(defaultOptions) || {}
+	options = options || getUserOptions() || extend(defaultOptions) || {}
 
 	cssFragmentMap={default:''}
 	cssFragments.forEach(function(x){
@@ -133,6 +133,7 @@ if(window.location.href.indexOf(contentRoot)==-1){
 	window.defaultOptions = defaultOptions
 	window.initialOptions = extend(options)
 	window.compileCss = compileCss
+	window.prepareCss = prepareCss
 	window.updateStyle = updateStyle
 	window.makeReq = makeReq
 	window.save = createStyleFile

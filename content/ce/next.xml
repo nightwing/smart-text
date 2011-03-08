@@ -19,3 +19,16 @@ getAboutUrls=function(){
 	return ans.sort()
 }
 getAboutUrls()
+
+
+/*r=document.createRange()
+r.setStart(gURLBar.stsegmentLayer.children[2].firstChild,2)
+r.setStart(gURLBar.stsegmentLayer.children[0].firstChild,1)
+//window.getSelection().addRange(r)
+rt=r.getBoundingClientRect()
+var brt=brt||gURLBar.stsegmentLayer.appendChild(document.createElement('div'))
+brt.style.cssText='position:fixed;background:red;z-index:1000;'+
+['left','top','width','height'].map(function(x)[x,':',rt[x],'px;'].join('')).join('')
+brt.style.cssText
+//shadia.inspect(brt)
+*/	

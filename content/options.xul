@@ -36,17 +36,12 @@
 </rows>
 </grid>
 	
-	
-
-
-
-
-
 <hbox>
-	<button label="liveEditXBL" oncommand="toggleLiveXBLEditing()" 
-	tooltiptext='reload urlbar.xml (:for developers:)'/>
+	<button label="reload" oncommand="xblLiveEdit.update()" hidden='true'/>
+	<button label="liveEditXBL" oncommand="toggleLiveXBLEditing(this)" 
+	tooltiptext='reload urlbar.xml (:for developers:)' type='checkbox'/>
 	<spacer flex="10"/>
-	<button label="save" oncommand="window.close()"/>
+	<button label="save" oncommand="saveChanges()//window.close()"/>
 </hbox>
 </prefpane>
 
@@ -268,6 +263,12 @@ apllyStyleSheet=function(){
 */
 
 applyStyleSheet=function(styleCode){
+	if(xblLiveEdit.active){
+		prepareCss()
+		optionsFromUi(options)
+		xblLiveEdit.update()
+		return
+	}
 	gModified = true
 	optionsFromUi(options)
 	var styleCode = compileCss(options)
@@ -287,7 +288,7 @@ applyStyleSheet=function(styleCode){
 
 
 saveChanges=function(){
-	if(xblLiveEdit.activeWindow)
+	if(xblLiveEdit.active)
 		xblLiveEdit.finish()
 	else if(gModified)
 		save()
@@ -302,19 +303,18 @@ saveChanges=function(){
 
 
 <script type="application/x-javascript"><![CDATA[
-/**************************************\     //****************************************
- *         **********  **********       \   //
- *        **********    **********       \ //
- * ********************************       V/    */
-toggleLiveXBLEditing=function(){
-	xblLiveEdit.update()
-	/*if(xblLiveEdit.activeWindow)
+/**************************************\     //***************************************
+ **       * *    ****  **********       \   //       **********  **********        **
+ * *     *   *  * **    **********       \ //       **********    **********      * *
+ *  * * * * * * * * * * * * * * * *       V/       * * * * * * * * * * * * * * * *  */
+toggleLiveXBLEditing=function(button){	
+	if(xblLiveEdit.active){
+		button.previousSibling.hidden=true
 		xblLiveEdit.finish()		
-	else{
-		xblLiveEdit.activeWindow = aWin
-		addActivatorToWindow(xblLiveEdit.activeWindow)
-		xblLiveEdit.activeWindow.focus()
-	}*/
+	}else{
+		button.previousSibling.hidden=false
+		xblLiveEdit.update()
+	}
 }
 var xblLiveEdit = (function(){
 	var ios = Cc["@mozilla.org/network/io-service;1"].getService(Ci.nsIIOService)
@@ -347,21 +347,23 @@ var xblLiveEdit = (function(){
 	return {
 		update: function(){
 			updateStyle(true, true)
+			this.active = true
 			with(aWin){
 				gURLBar.value=gBrowser.userTypedValue||gBrowser.mCurrentBrowser.lastURI.spec
 			}
 		},
 		finish: function(){
 			updateStyle(true, false)
-			save()
-			this.activeWindow = null
+			this.active = false
+			save()			
 			/*this.activeWindow.activator.shutdown()
 			this.activeWindow = null*/
 		}
 	}
 })()
+/*
 addActivatorToWindow = function(window){	
-	/*window.activator=window.activator||{
+	window.activator=window.activator||{
 		initialize:function(){
 			window.addEventListener('activate', this, false)
 		},
@@ -376,8 +378,8 @@ addActivatorToWindow = function(window){
 	window.activator.activate=[function(){
 		xblLiveEdit.update()
 	}]
-	window.activator.initialize()*/
-}
+	window.activator.initialize()
+}*/
 ]]></script>
 
 

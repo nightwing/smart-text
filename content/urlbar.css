@@ -14,6 +14,12 @@ stsegment{
 .smart-text{
 	color:graytext;
 	padding-left:1px;
+	overflow:hidden;
+	display:-moz-box;
+}
+stsegment.smart-text-end{
+	display:-moz-box;
+	-moz-box-flex:1;
 }
 /**==top bottom==**/
 .top>stsegment:hover{
@@ -26,6 +32,9 @@ stsegment{
 	cursor:alias;
 }
 /**==colors==**/
+.selected{
+color:red
+}
 stsegment:hover{
 	color: #1A1A1A!important;
 }
@@ -74,5 +83,9 @@ stsegment.basedomain{
 }
 /**==?hideHTTP==**/
 stsegment.www{
+	display:none
+}
+/**==?hideGo==**/
+#go-button{
 	display:none
 }
