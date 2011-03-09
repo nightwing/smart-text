@@ -17,12 +17,19 @@ stsegment{
 	overflow:hidden;
 	display:-moz-box;
 }
+.smart-text-inner{
+	overflow:visible;
+	display:-moz-box;
+	-moz-box-flex:1;
+	-moz-box-align: stretch;
+}
 stsegment.smart-text-end{
 	display:-moz-box;
 	-moz-box-flex:1;
 }
+
 /**==top bottom==**/
-.top>stsegment:hover{
+.top>.smart-text-inner>stsegment:not(.marked):hover{
 	text-decoration: underline!important;
 }
 .smart-text.top{
@@ -31,23 +38,25 @@ stsegment.smart-text-end{
 .smart-text-input.top{
 	cursor:alias;
 }
+
 /**==colors==**/
-.selected{
-color:red
-}
-stsegment:hover{
+stsegment:not(.marked):hover{
 	color: #1A1A1A!important;
 }
-.top>stsegment.subdomain:hover{
+.top > .smart-text-inner > stsegment.subdomain:not(.marked):hover{
 	text-decoration: line-through!important;
-	color: darkblue!important;
+	color: darkblue;
 }
-stsegment.empty:hover{
+stsegment:not(.marked).empty:hover{
 	text-decoration: none!important;
-	color:black!important;
+	color:black;
 }
-stsegment.basedomain{color:black!important;}
-stsegment.querry{color:#717171}
+stsegment.basedomain{
+	color:black;
+}
+stsegment.querry{
+	color:#717171;
+}
 .smart-text-ellipsis:hover{
 	text-shadow:-1px -1px 2px;
 	color:blue
@@ -55,6 +64,14 @@ stsegment.querry{color:#717171}
 .smart-text.left:hover{
 	color: #1A1A1A!important;
 }
+stsegment.selected{
+	color: HighlightText!important;
+	background-color: Highlight;
+}
+/**==stsegment.selected{
+	color: black!important;
+	background-color: rgba(100,200,100,0.5);
+}==**/
 /**==sizes==**/
 stsegment{
 	padding: $padding$px 0px;
@@ -67,6 +84,8 @@ stsegment{
 .st-layers {
 	margin-left:3px!important;
 }
+
+
 /**==?hideIdentityLabel==**/
 #identity-icon-label,#identity-icon-country-label{
 	display:none

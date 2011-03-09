@@ -348,9 +348,9 @@ var xblLiveEdit = (function(){
 		update: function(){
 			updateStyle(true, true)
 			this.active = true
-			with(aWin){
+			setTimeout(function(){ with(aWin){
 				gURLBar.value=gBrowser.userTypedValue||gBrowser.mCurrentBrowser.lastURI.spec
-			}
+			}}, 50)
 		},
 		finish: function(){
 			updateStyle(true, false)

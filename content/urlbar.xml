@@ -66,7 +66,6 @@
 
     <implementation implements="nsIDOMEventListener, nsIObserver">
     <constructor><![CDATA[
-		this.urlSplitter.init()
 		this.selectionManager.init()
 		this.inputclicks.init()
 		this.layerManager.init()
@@ -142,76 +141,80 @@
         ]]></body>
       </method>
 	  	
-<field name="urlSplitter"><![CDATA[({
-	smartTextContainer : this.stsegmentLayer,
+<field name="selectionManager"><![CDATA[({
+	container : this.stsegmentLayer,
 	elemCount:0,
 	tokenList:[],
 	setInnerHTML: function(tokenList){
 		var div = document.createElementNS('http://www.w3.org/1999/xhtml','div')
-		div.className = 'smart-text'
+		div.className = 'smart-text-inner'
 		var html = []
 		;(tokenList||this.tokenList).forEach(function(x){			
 			html.push(
-				'<stsegment class="', x.class, '">', 
+				'<stsegment class="', x.class, '" index="', x.index, '">', 
 					x.text.replace(/[<&]/g, function(str) {return str == "&" ? "&amp;" : "&lt;";}),
 				'</stsegment>' 
 			)
 		})
 		div.innerHTML = html.join('')
-		var el=this.smartTextContainer
+		var el=this.container
 		while (el.hasChildNodes())
 			el.removeChild(el.lastChild);
 		el.appendChild(div)
 	},
+	
 	getMarkedTokenList: function(st, en){
-		var newList = [], i=0, pt = this.tokenList[i]
-		while(pt.endpos <= st){		
-			newList.push(pt)
+		function sub(pt, sel, a, b){
+			var fr = pt.text.substring(a,b)
+			if(fr)
+				newList.push({text:fr, index:pt.index, class: pt.class+(sel?' selected marked':' marked')})
+		}
+		var newList = [], i=0, pt = this.tokenList[i], lastPos=0, st1, en1
+		//normalize marker
+		if (st > en){
+			st1=st; st=en; en=st1
+		} else if(st == en)
+			return this.tokenList
+			
+		//before marker start
+		while(pt && pt.endPos <= st){		
+			sub(pt, false)
+			lastPos = pt.endPos
 			pt = this.tokenList[++i]
 		}
+
+		//split first marked node
+		st1=st-lastPos
+		en1=en-lastPos
+		sub(pt, false, 0, st1)
+		if(en<=pt.endPos){
+			sub(pt, true, st1, en1)
+			sub(pt, false, en1)
+		} else {
+			sub(pt, true, st1)
+			//next token
+			lastPos = pt.endPos
+			pt = this.tokenList[++i]
+			while(pt && pt.endPos <= en){		
+				sub(pt, true)
+				lastPos=pt.endPos
+				pt = this.tokenList[++i]
+			}
+			sub(pt, true, 0, en-lastPos)
+			sub(pt, false, en-lastPos)			
+		}		
 		
-		this.tokenList=gURLBar.urlSplitter.tokenList
-
-this.tokenList=gURLBar.urlSplitter.tokenList
-
-st=34;en=47
-function sub(pt, sel, a, b){
-	var fr = pt.text.substring(a,b)
-	if(fr)
-		newList.push({text:fr,class: pt.class+(sel?' selected':'')})
-}
-var newList = [], i=0, pt = this.tokenList[i], lastPos=0
-while(pt && pt.endPos <= st){		
-	sub(pt, false)
-	lastPos = pt.endPos
-	pt = this.tokenList[++i]
-}
-
-
-var st1=st-lastPos,en1=en-lastPos
-sub(pt, false, 0, st1)
-if(en<pt.endPos){
-	sub(pt, true, st1, en1)
-	sub(pt, false, en1)
-}else{
-	sub(pt, true, st1)
-}
-
-pt = this.tokenList[++i]
-while(pt && pt.endPos <= en){		
-	sub(pt, true)
- /* lastPos=pt.endPos*/
-	pt = this.tokenList[++i]
-}
-while(pt){
-	sub(pt, false)
-	pt = this.tokenList[++i]
-}
+		//after marker end
+		while(pt = this.tokenList[++i])
+			sub(pt, false)
 		
+		return newList;
 	},
+	
 	htmlEscape: function(str){
 		return str.replace(/[<&]/g, function(str) {return str == "&" ? "&amp;" : "&lt;";});
 	},
+	
 	createElem:function(className,is,ip){
 		if(ip<=is)
 			return
@@ -236,10 +239,7 @@ while(pt){
 		this.elemCount=0
 		this.tokenList=[]		
 	},
-	init: function(){
-		//this.smartTextContainer.appendChild(this.smartTextContainer.cloneNode(false))
-	},
-
+	
 	synch: function(uri,url){
 	//dump("oooo",url,uri)
 		this.clear();
@@ -321,7 +321,7 @@ while(pt){
 		})
 		this.setInnerHTML()
 	//keep scrolled element visible
-		var pn=this.smartTextContainer
+		var pn=this.container
 		if(pn.scrollLeft+pn.clientWidth > pn.scrollWidth)
 			pn.scrollLeft = pn.scrollWidth
 	},
@@ -339,7 +339,7 @@ while(pt){
 		})
 		this.setInnerHTML()
 	//keep scrolled element visible
-		var pn=this.smartTextContainer
+		var pn=this.container
 		if(pn.scrollLeft+pn.clientWidth > pn.scrollWidth)
 			pn.scrollLeft = pn.scrollWidth
 	},
@@ -349,12 +349,10 @@ while(pt){
 		this.url=gURLBar.emptyText||gURLBar.getAttribute('placeholder')
 		this.createElem("empty",0,this.url.length);
 		this.setInnerHTML()
-	}
-})]]></field>
+	},
 
-<field name="selectionManager"><![CDATA[({
-	p1: document.getAnonymousElementByAttribute(this, "anonid", "stsegment-layer"),
 	p: document.getAnonymousElementByAttribute(this, "anonid", "input"),
+	
 	init: function(){
 		this.p.addEventListener("DOMMouseScroll", function(e){
 			if(e.ctrlKey){
@@ -371,7 +369,7 @@ while(pt){
 				this.editor.rootElement.scrollLeft+=(e.detail>0?1:-1)*15
 		}, true);
 
-		this.p1.addEventListener("DOMMouseScroll", function(e){
+		this.container.addEventListener("DOMMouseScroll", function(e){
 			if(e.ctrlKey){
 				if(this.scroll){
 					this.scroll=false
@@ -383,8 +381,9 @@ while(pt){
 				this.scrollLeft+=(e.detail>0?1:-1)*15
 		}, true);
 
-		this.p1.addEventListener("mousedown", this, true);
+		this.container.addEventListener("mousedown", this, true);
 	},
+	
 	scrollNumbers: function(text,offset,amount){
 		var m=parseInt(text.charAt(offset))
 		if(isNaN(m))
@@ -424,22 +423,26 @@ while(pt){
 		var newtext=this.scrollNumbers(text,offset,amount)
 		e.rangeParent.nodeValue=newtext
 		var len=newtext.length-text.length
-		var index=e.rangeParent.parentNode.index
-		var inds=gURLBar.urlSplitter.inds
+		var index=parseInt(e.rangeParent.parentNode.getAttribute('index'))
+		var inds=this.inds
 		text=this.p.value
 		text=text.substring(0,inds[index])+newtext+text.substr(inds[index+1])
-		gURLBar.urlSplitter.url=this.p.value=text
+		this.url=this.p.value=text
+		this.tokenList[index].text = text
+		this.tokenList[index].endPos += len
 		
 		if(len!=0){
-			for(var i=index+1;i<inds.length;i++)
+			for(var i=index+1;i<inds.length;i++){
 				inds[i]+=len
+				this.tokenList[index].endPos += len
+			}
 		}
 	},
 
 	selectFromElement: function(el){
 		var st, en ;
-		var ind = gURLBar.urlSplitter.inds
-		var i = el.index
+		var ind = this.inds
+		var i = parseInt(el.getAttribute('index'))
 
 		if(i===ind.length-1){
 			st=0;en=ind[i-1]
@@ -455,24 +458,23 @@ while(pt){
 
 	hrefFromElement: function (el) {
 		var st, en ;
-		var ind = gURLBar.urlSplitter.inds;
-		var i = el.index;
-		var url=gURLBar.urlSplitter.url
+		var ind = this.inds;
+		var i = parseInt(el.getAttribute('index'));
+		var url= this.url
 		if(i>=ind.length-1){
 			st=0;en=ind[i-1]
 		}else {
 			st=ind[i];en=ind[i+1]
 		}
 		if(el.className==="subdomain"){
-			return url.substring(0, ind[0])+url.substring(ind[i+1], gURLBar.urlSplitter.domainEnd)
+			return url.substring(0, ind[0])+url.substring(ind[i+1], this.domainEnd)
 		}else
 			return url.substring(0, en)
 	},
 
 	selectFromRange: function () {
-		var ind = gURLBar.urlSplitter.inds
-		var st = ind[this.anchor.node.parentNode.index] + this.anchor.offset
-		var en = ind[this.focus.node.parentNode.index] + this.focus.offset
+		var st = this.anchorOffset
+		var en = this.focusOffset
 		if(st>en){
 			var st1 = st
 			st=en
@@ -493,30 +495,25 @@ while(pt){
 
 	moveSelectionToInputField: function(start,end){
 		gURLBar.layerManager.makePlain();
-		dump('before')
 		this.p.focus();
-		dump('before')
 		
 		if(typeof start!=="number"||typeof end!=="number")
 			this.p.select()
 		else this.p.setSelectionRange(start,end)
 	},
-	downcoord:[0,0],
-	onMouseDown: function(event){
-		
-	},
-	onMouseUp: function(event){
+
+	onMouseUp: function(event, cursorMode){
 		if(event.button==2){
 			this.moveSelectionToInputField();
-			document.getAnonymousElementByAttribute(gURLBar.inputBox,'anonid','input-box-contextmenu').openPopup(null,1,event.clientX+1,event.clientY+1,true,true)
+			document.getAnonymousElementByAttribute(gURLBar.inputBox,
+				'anonid','input-box-contextmenu').openPopup(null,1,event.clientX+1,event.clientY+1,true,true)
 		}else{
-			var isSel=window.getSelection().toString()
+			var isSel=this.anchorOffset!=this.focusOffset||cursorMode
 			var state=this.state
-			var moveLen=Math.abs(this.downcoord[0]-event.clientX)+Math.abs(this.downcoord[1]-event.clientY)
 			var cls=event.originalTarget.className
 			if(cls=='empty'&&state!='left'){
 				this.selectFromRange();
-			}else if(isSel||(state==undefined && cls!=="protocol"&&cls!=="smart-text-end")||( moveLen>10)){
+			}else if(isSel||(state==undefined && cls!=="protocol"&&cls!=="smart-text-end")/* ||( moveLen>10) */){
 				this.selectFromRange();
 			}else if(state=='left'||cls==="smart-text-end"||(state=='top' && cls==="protocol")){
 				gURLBar.inputclicks.elipsisClick(event);
@@ -531,92 +528,99 @@ while(pt){
 	},
 
 	handleEvent: function(e){
-		if(e.type==="mousemove"){
-			this.focus = this.getEventPoint(e)	
-			
-			var focusRect = this.range.getBoundingClientRect()
-			var w = focusRect.left-b1.left
-			
-			
-
-			if(w>0){
-				this.selection.style.width=w+'px'
-				this.selection.style.left=b1.left+'px'
-			}else if(w<0){
-				this.selection.style.width=-w+'px'
-				this.selection.style.left=focusRect.left+'px'
-			}else{
-				var moveLen=Math.abs(this.downcoord[1]-e.clientY)
-				if(moveLen>2)
-					w=1
-				this.selection.style.width=w+'px'
-				this.selection.style.left=focusRect.left+'px'
-			}
-				
-			dump(e.rangeParent, e.rangeOffset, this.range.startOffset, this.offsetFromStart(e.rangeParent, e.rangeOffset))
-			//event.preventDefault()
-		}else if(e.type==="mouseup"){
-			window.removeEventListener("mousemove", this, true);
-			window.removeEventListener("mouseup", this, true);
-			this.range = null
-			this.onMouseUp(e)			
-		}else if(e.type=="mousedown"){
-			if(!this.p.value){
-				e.preventDefault()
-				this.moveSelectionToInputField()				
-				return
-			}
-			this.downcoord = [e.clientX,e.clientY]
-			this.state = gURLBar.layerManager.elipsisMask.lastTarget.type
-			
-			this.range = document.createRange();
-			
-			this.anchor = this.getEventPoint(e)			
-			
-			b1 = this.range.getBoundingClientRect()
-			b2 = this.p1.getBoundingClientRect()
-			this.selection = this.p1.appendChild(document.createElement('stselection'))
-			this.selection.style.cssText = 'position:fixed;background:rgba(100,200,100,0.5);z-index:-1;pointer-events:none'+
-				'left:'+(b1.left)+'px; height:'+b1.height+'px;width:1px;top:'+(b1.top)+'px;'
-			
-			window.addEventListener("mouseup", this, true);
-			window.addEventListener("mousemove", this, true);
-			this.p1.setCapture&&this.p1.setCapture(false)
+		e.preventDefault()
+		if(!this.p.value){
+			this.moveSelectionToInputField()				
+			return
 		}
+		var self = this, x, y, cursorMode, startY = e.clientY
+		
+		var onMouseMove = function(e){
+			x = e.clientX, y = e.clientY
+			var newFocus = self.offsetFromStart(e.rangeParent, e.rangeOffset)	
+							
+			if(self.anchorOffset == newFocus && (y < visibleRect.m  || y > visibleRect.b)){
+				if(!cursorMode){
+					self.cursor.style.display = ''; 
+					cursorMode = true;
+					self.cursor.style.left = cursorRect.l + 'px'; 
+				}
+			}else if(cursorMode){
+				self.cursor.style.display = 'none';
+				cursorMode = false
+			}
+			
+			if(newFocus==self.focusOffset)
+				return
+			self.focusOffset = newFocus;
+			self.setInnerHTML(self.getMarkedTokenList(self.anchorOffset, self.focusOffset))
+		}
+		
+		var onScrollInterval = function(){
+			//dump(x , visibleRect.left, visibleRect.right)
+			if(x < visibleRect.l){
+				self.container.scrollLeft += x - visibleRect.l
+				self.container.scrollLeft
+			}else if(x > visibleRect.r){
+				self.container.scrollLeft += x - visibleRect.r
+			}
+		}
+		
+		var onMouseUp = function(){
+			window.removeEventListener("mousemove", onMouseMove, true);
+			window.removeEventListener("mouseup", onMouseUp, true);
+			clearInterval(timerId);
+			self.cursor.style.display = 'none'
+			self.onMouseUp(e, cursorMode)
+		}
+		
+				
+		this.state = gURLBar.layerManager.elipsisMask.lastTarget.type			
+		this.anchorOffset = this.focusOffset = this.offsetFromStart(e.rangeParent, e.rangeOffset)
+	
+	
+		this.container.setCapture(false)		
+		window.addEventListener("mouseup", onMouseUp, true);
+		window.addEventListener("mousemove", onMouseMove, true);
+		var timerId = setInterval(onScrollInterval, 40);
+
+		if(!this.cursor){
+			this.cursor = this.container.parentNode.appendChild(document.createElement('stcursor'))
+			this.cursor.style.cssText = 'border:1px solid;display:none;position:fixed;z-index:-1;pointer-events:none'
+		}
+		var visibleRect = this.container.getBoundingClientRect(), cursorRect = this.getEventPoint(e, this.anchorOffset)
+		visibleRect = {
+			m: visibleRect.top + visibleRect.height * 0.2,
+			h: visibleRect.height,
+			t: visibleRect.top,
+			l: visibleRect.left,
+			r: visibleRect.right,
+			b: cursorRect.b-2
+		}
+		this.cursor.style.height = (visibleRect.h)+'px'
 	},
 	
-	normalizePoint: function(point) {
-		while (point.node.nodeType != 3 ){
-			var newNode = point.node.childNodes[point.offset]
-			while(!newNode){
-				if(point.node === this.p1){
-					//only this requires shallow dom structure
-					point.node = this.p1.lastChild
-					while (!point.node.lastChild||point.node.lastChild.nodeType != 3 ){
-						point.node = point.node.previousSibling
-					}
-					point.node = point.node.lastChild
-					point.offset = point.node.length
-					return point
-				}else{
-					newNode = point.node.nextSibling;
-				}
-				if(!newNode)
-					point.node = point.node.parentNode;
+	getEventPoint: function(e, startOffset){
+		var node = e.rangeParent, offset = e.rangeOffset
+		if(node.nodeType != 3) try{
+			var i = this.inds.indexOf(startOffset)-1
+			if(i>0){
+				node = this.container.firstChild.children[i].firstChild
+				offset = node.length
+			}else{
+				node = this.container.firstChild.children[0].firstChild
+				offset = 0
 			}
-			while(newNode.firstChild){
-				newNode = newNode.firstChild
-			}
-			point.node = newNode;
-			point.offset = 0
-		}
-		return  point
-	},
-	getEventPoint: function(e){
-		var point = this.normalizePoint({node: e.rangeParent, offset: e.rangeOffset})
-		this.range.setStart(point.node, point.offset)
-		this.range.setStart(point.node, point.offset)
-		return point
+		}catch(e){return {left:0, height:0}}
+		
+		var range = document.createRange();
+		
+		range.setStart(node, offset)
+		range.setStart(node, offset)
+		var b1 = range.getBoundingClientRect()
+		range.detach()
+		
+		return {l:b1.left, h:b1.height, b:b1.bottom}
 	},
 	
 
@@ -634,7 +638,6 @@ while(pt){
 				l+=getLength(ch[i])
 			return l
 		}
-		
 		function getLength2(node, offset){
 			if(!node || !offset)
 				return 0;
@@ -650,18 +653,15 @@ while(pt){
 		}
 		
 		var l = getLength2(node, offset)
-		
-		
-		while(node && node !== this.p1){
+				
+		while(node && node !== this.container){
 			var newNode = node.previousSibling
 			while(newNode){
 				l+=getLength(newNode)
 				newNode = newNode.previousSibling
 			}
 			node = node.parentNode;
-		}
-		
-		
+		}		
 		return  l
 	}
 })]]> </field>
@@ -715,11 +715,12 @@ while(pt){
 			var self=this;
 			//this.state=gURLBar.layerManager.elipsisMask.lastTarget.type
 			
-			this.clickCountTimer=window.setTimeout(function(){dump(self.clickCount,'timer');self.clickCount=0},this.DBL_CLICK_SPEED+100*Math.min(this.clickCount,3))
+			this.clickCountTimer=window.setTimeout(function(){
+				self.clickCount=0
+			},this.DBL_CLICK_SPEED+100*Math.min(this.clickCount,3))
 			this.clickCount++
 			
 			var curpos=event.clientX+" "+event.clientY
-			dump(e,l,this.clickCount,curpos,this.lastPos)
 			if(e==l&&(this.clickCount!==1||curpos==this.lastPos)){
 				if(event.detail>1)this.stopEvent(event)				
 				if(p.selectionStart==l&&p.selectionEnd==l){				
@@ -858,7 +859,7 @@ while(pt){
 	synch: function(val){
 		var url=val
 		if(!url){
-			urlSplitter.emptySynch()
+			selectionManager.emptySynch()
 			return true;
 		}try {
 			var uri = makeURI(url, null, null);
@@ -867,10 +868,10 @@ while(pt){
 			uri = null;
 		}
 		if (!uri) {
-			this.bar.urlSplitter.simpleSynch(url);
+			this.bar.selectionManager.simpleSynch(url);
 			return null;
 		}
-		this.bar.urlSplitter.synch(uri,url);
+		this.bar.selectionManager.synch(uri,url);
 		return true;
 	},
 	m1: function(e){
