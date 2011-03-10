@@ -110,14 +110,15 @@ function compileCss(options){
 
 function getOptionsFromUI(){
 	var cs = window.getComputedStyle(gURLBar)
-	options.barHeight = cs.height
-	options.fontSize = cs.fontSize
+	options.barHeight = parseInt(cs.height)
+	options.fontSize = parseInt(cs.fontSize)
 	options.lineHeight = Math.ceil( options.fontSize*1.2 )	
 	options.padding=(options.barHeight-options.lineHeight)/2;
 	if(options.padding-Math.floor(options.padding)>0){
 		options.lineHeight--;
 		options.padding=(options.barHeight-options.lineHeight)/2;
 	}
+	options.barHeight = Math.max(options.barHeight, options.lineHeight)
 }
 
 /******************************************************************/

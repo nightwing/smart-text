@@ -1,3 +1,64 @@
+﻿//goDoCommand
+
+//decodeURIComponent(gURLBar.value)
+//goDoCommand('cmd_paste')
+gURLBar.handleCommand
+gURLBar._canonizeURL
+url=gURLBar.value
+ var postData = {};
+    url = getShortcutOrURI(url, postData);
+
+postData.value
+
+getAboutUrls=function(){
+	var l="@mozilla.org/network/protocol/about;1?what=";
+	var ans=[];
+	for(var i in Cc)
+		if(i.indexOf(l)==0)
+			ans.push('about:'+i.substr(l.length))
+	return ans.sort()
+}
+getAboutUrls()
+
+
+/********************************************************************************************/
+
+/*r=document.createRange()
+r.setStart(gURLBar.stsegmentLayer.children[2].firstChild,2)
+r.setStart(gURLBar.stsegmentLayer.children[0].firstChild,1)
+//window.getSelection().addRange(r)
+rt=r.getBoundingClientRect()
+var brt=brt||gURLBar.stsegmentLayer.appendChild(document.createElement('div'))
+brt.style.cssText='position:fixed;background:red;z-index:1000;'+
+['left','top','width','height'].map(function(x)[x,':',rt[x],'px;'].join('')).join('')
+brt.style.cssText
+//shadia.inspect(brt)
+*/	
+
+
+
+
+/********************************************************************************************/
+
+
+
+function addrem(add){
+
+
+}
+var logger=logger||{}
+logger.handleEvent = function(e){
+	dump(e.type,e.target,e.originalTarget,e.originalTarget.textContent)
+}
+;['mousedown','mouseup','click','focus','blur'].forEach(function(x){
+	window.removeEventListener(x, logger, true)
+	window.addEventListener(x, logger, true)
+})
+
+
+/********************************************************************************************/
+
+
 openUILinkIn=function openUILinkIn(url, where, aAllowThirdPartyFixup, aPostData, aReferrerURI) {
     var params;
     if (arguments.length == 3 && typeof arguments[2] == "object") {
