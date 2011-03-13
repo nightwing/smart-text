@@ -18,11 +18,10 @@
 				<children includes="image|deck|stack|box">
 					<xul:image class="autocomplete-icon" allowevents="true"/>
 				</children>
-				<xul:stack class="fission-progress-stack" flex="1" context="" >
-					<children includes="progressmeter"/>
-					<xul:hbox class="autocomplete-textbox-container-fission" >
+
 <xul:stack flex="1" anonid="stack" class="urlbar-stack1">
-          
+    <children includes="progressmeter"/>
+
 <xul:hbox flex="1" >
 <xul:hbox flex="1" class="st-layers" >
 	<xul:vbox flex="1" anonid="textbox-input-box" class="textbox-input-box plain " align="stretch">
@@ -55,8 +54,7 @@
 
 
 <children includes="hbox"/>
-					</xul:hbox>
-				</xul:stack>
+
 			</xul:hbox>
 			<xul:dropmarker anonid="historydropmarker" class="autocomplete-history-dropmarker urlbar-history-dropmarker" allowevents="true" xbl:inherits="open,enablehistory"/>
 			<children/>
@@ -66,6 +64,7 @@
 
     <implementation implements="nsIDOMEventListener, nsIObserver">
     <constructor><![CDATA[
+		this.__noSuchMethod__=dump
 		this.selectionManager.init()
 		this.inputclicks.init()
 		this.layerManager.init()
@@ -738,8 +737,9 @@
 		var onMouseMove = function(e){
 			x = e.clientX, y = e.clientY
 			var newFocus = self.offsetFromStart(e.rangeParent, e.rangeOffset)	
-							
-			if(self.anchorOffset == newFocus && (y < visibleRect.m  || y > visibleRect.b)){
+			
+			var xR=Math.abs(cursorRect.l-x)<10
+			if(self.anchorOffset == newFocus && (y < visibleRect[xR?'m':'t']  || y > visibleRect.b)  ){
 				if(!cursorMode){
 					self.cursor.style.display = ''; 
 					cursorMode = true;

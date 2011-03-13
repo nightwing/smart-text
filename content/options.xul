@@ -10,34 +10,37 @@
 		>
 		 <h:head><h:link rel="icon" href="chrome://smarttext/content/icon.png"/></h:head>
 
-<prefpane>
+<prefpane flex="1">
 <hbox>
 	<button onclick="reloadWin()">reload</button>
 	<spacer flex='1'/>
 	<button onclick="gModified=false;optionsToUi(initialOptions);applyStyleSheet()">reset</button>
 </hbox>
+<vbox oncommand="applyStyleSheet()" id='applyStyleSheet'>
 <grid tooltiptext="configure appearence of urlbar">
-<columns>
-	<column flex="1"/>
-	<column flex="0"/>
-	<column flex="0"/>
-</columns>
-<rows flex="1" id="optionGrid">
-	<row align="center">
-		<label>font size</label>
-		<textbox id="fontSize" type="number" value="12" oncommand="applyStyleSheet()" onkeyup1='applyStyleSheet()'/><label>px</label>
-	</row>
-	<row align="center">
-		<label>urlbar height</label>
-		<textbox id="barHeight" type="number" value="24" oncommand="applyStyleSheet()"/><label>px</label>
-	</row>
-
-	
-</rows>
+	<columns>
+		<column flex="1"/>
+		<column flex="0"/>
+		<column flex="0"/>
+	</columns>
+	<rows flex="1" id="optionGrid">
+		<row align="center">
+			<label>font size</label>
+			<textbox id="fontSize" type="number" value="12" onkeyup1='applyStyleSheet()'/><label>px</label>
+		</row>
+		<row align="center">
+			<label>urlbar height</label>
+			<textbox id="barHeight" type="number" value="24" /><label>px</label>
+		</row>		
+	</rows>
 </grid>
-	
-<hbox>
-	<button label="reload" oncommand="xblLiveEdit.update()" hidden='true'/>
+</vbox>	
+<hbox id="bottombox">
+	<menupopup id='context'>
+		<menuitem label='focus' oncommand="xblLiveEdit.update();aWin.focus()"/>
+		<menuitem label='unregiter' oncommand="xblLiveEdit.update(false)"/>
+	</menupopup>
+	<button label="reload" oncommand="xblLiveEdit.update()" hidden='true' context='context'/>
 	<button label="liveEditXBL" oncommand="toggleLiveXBLEditing(this)" 
 	tooltiptext='reload urlbar.xml (:for developers:)' type='checkbox'/>
 	<spacer flex="10"/>
@@ -193,33 +196,58 @@ formatString = function(string, options){
 addCheckboxes=function(config){
 	var xmlFrag = <row align="center">
 				<label>$descr$</label>
-				<checkbox id="$id$" oncommand="applyStyleSheet()"/><label> </label>
+				<checkbox id="$id$" /><label> </label>
 			</row>.toXMLString()
+	var chFrag = <checkbox id="$0$" label="$1$" style='display:inline'/>.toXMLString()
+	 optionGridXML = [], checkboxListXML=[]
 	
-	var xml = config.map(function(x){
-		if(x.type !='checkbox')
+	gConfig.forEach(function(x){
+		if(x.type=='number')
 			return
-		return formatString(xmlFrag, x)
+		else if(x.type=='checkbox')		
+			optionGridXML.push(formatString(xmlFrag, x))
+		else if(x.type=='checkboxList'){
+			var ans=['<groupbox><caption label="'+x.descr+'"/>',"<div style='width:100%;position:relative;display:block'>"]
+			for(var i in x.subs)
+				ans.push(formatString(chFrag, [i, x.subs[i]]))
+			ans.push('</div></groupbox>')
+			checkboxListXML.push(ans.join(''))
+		}
 	})
-	appendXML($('optionGrid'), xml.join(''))
+	dump(checkboxListXML)
+	appendXML($('optionGrid'), optionGridXML.join(''))
+	appendXML($('applyStyleSheet'), checkboxListXML.join(''))
 }
+
+
 /**/
 gConfig = [
 	{id:'fontSize', descr: '', type: 'number'},
 	{id:'barHeight', descr: '', type: 'number'},//TODO
-	{id:'hideIdentityLabel', descr: 'hide identity label', type: 'checkbox'},
-	{id:'progressmeter', descr: 'progressmeter background', type: 'checkbox'},
-	{id:'boldDomain', descr: 'bold domain', type: 'checkbox'},
-	{id:'hideHTTP', descr: 'hide "http://"', type: 'checkbox'},
-	{id:'hideGo', descr: 'always hide go button', type: 'checkbox'},
-	{id:'bubble', descr: 'bubble around domain', type: 'checkbox'},
+	{id:'progressmeter', descr: 'status4evar\'s progressmeter', type: 'checkbox'},
 	{id:'arrow', descr: 'arrow after domain', type: 'checkbox'},
+	{id:'boldDomain', descr: 'bold domain', type: 'checkbox'},
+	{id:'bubble', descr: 'bubble around domain', type: 'checkbox'},
+	{id:'hide', descr: 'hide', subs: {
+		HTTP: 'http://',
+		go: 'go button',
+		identityLabel: 'identity label',
+		ellipsis: 'ellipsis'
+	}, type: 'checkboxList'},
 ]
 optionsFromUi = function(options){
 	gConfig.forEach(function(x){
-		options[x.id] = $(x.id)[x.type=='checkbox'?'checked':'value']
 		if(x.type=='number')
-			options[x.id] = parseInt(options[x.id])
+			options[x.id] = parseInt($(x.id).value)
+		else if(x.type=='checkbox')		
+			options[x.id] = $(x.id).checked
+		else if(x.type=='checkboxList'){
+			var ans=[]
+			for(var i in x.subs)
+				if($(i).checked)
+					ans.push(i)
+			options[x.id] = ans.length? ans: null
+		}			
 	})
 	
 	options.lineHeight = Math.ceil( options.fontSize*1.2 )	
@@ -235,7 +263,15 @@ optionsFromUi = function(options){
 }
 optionsToUi = function(options){
 	gConfig.forEach(function(x){
-		$(x.id)[x.type=='checkbox'?'checked':'value'] = options[x.id]
+		if(x.type=='number')
+			$(x.id).value = options[x.id]
+		else if(x.type=='checkbox')		
+			$(x.id).checked = options[x.id]
+		else if(x.type=='checkboxList'){
+			var ans=options[x.id]||[]
+			for(var i in x.subs)
+				$(i).checked=ans.indexOf(i)>-1
+		}
 	})
 }
 
@@ -267,7 +303,7 @@ apllyStyleSheet=function(){
 
 applyStyleSheet=function(styleCode){
 	if(xblLiveEdit.active){
-		prepareCss()
+		
 		optionsFromUi(options)
 		xblLiveEdit.update()
 		return
@@ -317,6 +353,8 @@ var toggleLiveXBLEditing=function(button){
 	}else{
 		button.previousSibling.hidden=false
 		xblLiveEdit.update()
+		//aWin.restore()
+		//focus()
 	}
 }
 var xblLiveEdit = (function(){
@@ -337,6 +375,7 @@ var xblLiveEdit = (function(){
 	}
 	function getData(useDataURI){
 		var binding = makeReq(rootPath+'urlbar.xml')
+		prepareCss()
 		var css = compileCss(options)
 		
 		var binding = "data:text/xml" + ";base64," + btoa(binding);
@@ -348,12 +387,11 @@ var xblLiveEdit = (function(){
 	}
 	
 	return {
-		update: function(){
-			updateStyle(true, true)
+		update: function(unregister){
+			updateStyle(unregister==undefined||unregister, true)
 			this.active = true
 			setTimeout(function(){ with(aWin){
-				gURLBar.value=gBrowser.userTypedValue||gBrowser.mCurrentBrowser.lastURI.spec
-				focus()
+				gURLBar.value=gBrowser.userTypedValue||gBrowser.mCurrentBrowser.lastURI.spec				
 			}}, 50)
 		},
 		finish: function(){

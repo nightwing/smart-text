@@ -88,10 +88,15 @@ function prepareCss(){
 
 	cssFragmentMap=[]
 	for(var i in cssFragments){
-		var x = cssFragments[i]
+		var x = cssFragments[i], con
 		var obj={value:x[1]}
+		if(x[0][0]=='-'){
+			con=x[0].substr(1).split(/-/)
+			obj.eatBack = parseInt(con[0])
+			x[0]=con[1]
+		}
 		if(x[0][0]=='?'){
-			var con=x[0].substr(1).split('=')
+			con=x[0].substr(1).split(/=|\?/)
 			obj.name = con[0]
 			obj.conditionValue = con[1]
 		}
@@ -101,16 +106,32 @@ function prepareCss(){
 
 function compileCss(options){
 	var compiledCss=[OP_COM, JSON.stringify(options), CL_COM, '\n', options.docrule, '{']
-	for each(var i in cssFragmentMap)
-		if(!i.name
-			|| (i.name && !i.conditionValue && options[i.name])
-			|| options[i.name] == i.conditionValue
-			)
+	for each(var i in cssFragmentMap){
+		var valid=false, x
+
+		if(!i.name)
+			valid = true
+		else if(!i.conditionValue)
+			valid = options[i.name]
+		else if(x = options[i.name]){
+			if(x.indexOf)
+				valid = x.indexOf(i.conditionValue)>-1
+			else
+				valid = x == i.conditionValue
+		}
+				
+		if(valid){
+			if(i.eatBack){
+				dump(compiledCss[compiledCss.length-1].slice(0, -i.eatBack),-i.eatBack)
+				compiledCss[compiledCss.length-1]=compiledCss[compiledCss.length-1].slice(0, -i.eatBack)			
+			}
 			compiledCss.push(
 				i.value.replace(/\$[^\$]*\$/g, function(x){
 					return options[x.slice(1,-1)]
 				})
 			);
+		}
+	}
 	compiledCss.push('}')
 	return compiledCss.join('')
 }
