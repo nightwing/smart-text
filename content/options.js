@@ -146,17 +146,26 @@ function getOptionsFromUI(){
 		options.lineHeight--;
 		options.padding=(options.barHeight-options.lineHeight)/2;
 	}
-	options.barHeight = Math.max(options.barHeight, options.lineHeight)
+	options.barHeight = Math.max(options.barHeight, options.lineHeight+2*options.padding)
 }
 
 /******************************************************************/
 prepareCss()
 if(window.location.href.indexOf(contentRoot)==-1){
 	//createStyleFile(cssFile)
-	getOptionsFromUI(options)
-	var text = compileCss(options)
-	writeToFile(cssFile, text)
-	updateStyle(true)
+	var onLoad=function(){
+		window.removeEventListener('load',onLoad,false)
+		getOptionsFromUI(options)
+		var text = compileCss(options)
+		writeToFile(cssFile, text)
+		//for status4evar
+		clearInterval(gURLBar._overLinkInterval);
+		updateStyle(true)
+	}
+	window.addEventListener('load',onLoad,false)
+	if(document.readyState=='complete')
+		onLoad()
+		
 }else{
 	window.options = options
 	window.cssFragmentMap = cssFragmentMap
