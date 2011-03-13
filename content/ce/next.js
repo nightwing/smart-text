@@ -42,6 +42,46 @@ brt.style.cssText
 
 
 
+gURLBar.popup.__proto__.onPopupClick = function onPopupClick(aEvent) {
+    if (aEvent.button == 2) {
+        return;
+    }
+	var sel=getSelection(), val = sel.toString()
+	if(val){
+		Cc["@mozilla.org/widget/clipboardhelper;1"]
+					  .getService(Ci.nsIClipboardHelper)
+					  .copyString(val);
+		sel.removeAllRanges()
+		return
+	}
+    var controller = this.view.QueryInterface(Components.interfaces.nsIAutoCompleteController);
+    if (aEvent.button == 0 &&
+        !aEvent.shiftKey &&
+        !aEvent.ctrlKey && !aEvent.altKey && !aEvent.metaKey) {
+        controller.handleEnter(true);
+        return;
+    }
+    if (gURLBar && this.mInput == gURLBar) {
+        var url = controller.getValueAt(this.selectedIndex);
+        //this.closePopup();
+        //controller.handleEscape();
+        let action = this.mInput._parseActionUrl(url);
+        if (action) {
+            if (action.type == "switchtab") {
+                url = action.param;
+            } else {
+                return;
+            }
+        }
+        //openLinkIn(url, whereToOpenLink(aEvent, false, true), {relatedToCurrent: true, fromChrome: false});
+		gBrowser.loadOneTab(url, {inBackground: true, relatedToCurrent: true});
+    }
+}
+
+/********************************************************************************************/
+
+
+
 function addrem(add){
 
 

@@ -6,8 +6,6 @@
 }
 /* .smart-text>scrollbar {display:none!important} */
 stsegment{
-	/*-moz-user-focus: normal;
-	-moz-user-select: text;*/
 	white-space: pre;
 	display:block;
 }
@@ -66,12 +64,46 @@ stsegment.querry{
 }
 stsegment.selected{
 	color: HighlightText!important;
-	background-color: Highlight;
+	background-color: Highlight!important;
 }
 /**==stsegment.selected{
 	color: black!important;
 	background-color: rgba(100,200,100,0.5);
 }==**/
+/**==popup==**/
+description.ac-normal-text{-moz-user-select: text;}
+stlink{
+	display:block;
+	border-radius: 2px;
+	margin:1px 2px;
+}
+stlink[odd]{
+	background-color: #FAFAFA;
+}
+stlink:hover{
+	text-decoration: underline!important;
+	color:darkblue;
+	cursor:pointer;
+	/background-color: #80BB4D;
+	/background-color: #6B8BC6;
+	background-color: lightblue;
+	color:darkblue;
+	text-shadow: 0pt 1px 0pt rgba(0, 0, 0, 0.25);
+	box-shadow: 0pt 0pt 0pt 1px rgba(0, 0, 0, 0.2) inset;
+	background-image: -moz-linear-gradient(rgba(255, 255, 255, 0.25), rgba(0, 0, 0, 0.15));
+	
+}
+.stPopup{
+	-moz-appearance: none!important;
+	border-width: 1px!important;
+	-moz-border-top-colors: threeddarkshadow!important;
+	-moz-border-right-colors: threeddarkshadow!important;
+	-moz-border-bottom-colors: threeddarkshadow!important;
+	-moz-border-left-colors: threeddarkshadow!important;
+	padding: 0pt;
+	background: -moz-field!important;
+} 
+
 /**==sizes==**/
 stsegment{
 	padding: $padding$px 0px;
@@ -107,4 +139,32 @@ stsegment.www{
 /**==?hideGo==**/
 #go-button{
 	display:none
+}
+/**==?bubble==**/
+stsegment.basedomain{
+	/background-color: #80BB4D;
+	/background-color: #6B8BC6;
+	/color: white;
+	text-shadow: 0pt 1px 0pt rgba(0, 0, 0, 0.25);
+	box-shadow: 0pt 0pt 0pt 1px rgba(0, 0, 0, 0.2) inset;
+	background-image: -moz-linear-gradient(rgba(255, 255, 255, 0.25), rgba(0, 0, 0, 0.15));
+	border-radius: 2px;  /**==?bubble=padded==**/
+	padding-left:1px;padding-right:1px
+}
+stsegment.basedomain.first{
+	padding-left:0px!important
+} 
+stsegment.basedomain.last{
+	padding-right:0px!important /**==?bubble==**/
+}
+/**==?arrow==**/
+stsegment.basedomain:not(.last)+stsegment::before{
+	width: 10px;
+	content:'\25B6';
+	color:rgba(100,200,100,1);
+	text-shadow: 1px 1px 2px  yellow;
+	/*
+	background-image: -moz-image-rect(url('chrome://smarttext/content/ce/breadcrumb.png'), 0%, 100%,100%,60%); 
+	background-position:left 50%;
+	background-repeat:no-repeat;*/
 }

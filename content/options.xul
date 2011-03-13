@@ -41,7 +41,7 @@
 	<button label="liveEditXBL" oncommand="toggleLiveXBLEditing(this)" 
 	tooltiptext='reload urlbar.xml (:for developers:)' type='checkbox'/>
 	<spacer flex="10"/>
-	<button label="save" oncommand="saveChanges()//window.close()"/>
+	<button label="save" oncommand="window.close()//saveChanges()//"/>
 </hbox>
 </prefpane>
 
@@ -211,6 +211,9 @@ gConfig = [
 	{id:'progressmeter', descr: 'progressmeter background', type: 'checkbox'},
 	{id:'boldDomain', descr: 'bold domain', type: 'checkbox'},
 	{id:'hideHTTP', descr: 'hide "http://"', type: 'checkbox'},
+	{id:'hideGo', descr: 'always hide go button', type: 'checkbox'},
+	{id:'bubble', descr: 'bubble around domain', type: 'checkbox'},
+	{id:'arrow', descr: 'arrow after domain', type: 'checkbox'},
 ]
 optionsFromUi = function(options){
 	gConfig.forEach(function(x){
@@ -304,10 +307,10 @@ saveChanges=function(){
 
 <script type="application/x-javascript"><![CDATA[
 /**************************************\     //***************************************
- **       * *    ****  **********       \   //       **********  **********        **
- * *     *   *  * **    **********       \ //       **********    **********      * *
+ **       * *    * **  ** ** ** *       \   //       ** *** ***  *** ** ***        **
+ * *     *   *  * **    ** ** ****       \ //       ** * ** **    **** * ***      * *
  *  * * * * * * * * * * * * * * * *       V/       * * * * * * * * * * * * * * * *  */
-toggleLiveXBLEditing=function(button){	
+var toggleLiveXBLEditing=function(button){	
 	if(xblLiveEdit.active){
 		button.previousSibling.hidden=true
 		xblLiveEdit.finish()		
@@ -350,6 +353,7 @@ var xblLiveEdit = (function(){
 			this.active = true
 			setTimeout(function(){ with(aWin){
 				gURLBar.value=gBrowser.userTypedValue||gBrowser.mCurrentBrowser.lastURI.spec
+				focus()
 			}}, 50)
 		},
 		finish: function(){

@@ -86,21 +86,28 @@ function prepareCss(){
 
 	options = options || getUserOptions() || extend(defaultOptions) || {}
 
-	cssFragmentMap={default:''}
-	cssFragments.forEach(function(x){
-		if(x[0][0]=='?')
-			cssFragmentMap[x[0].substr(1)]=x[1]
-		else
-			cssFragmentMap.default+=x[1]
-	})
+	cssFragmentMap=[]
+	for(var i in cssFragments){
+		var x = cssFragments[i]
+		var obj={value:x[1]}
+		if(x[0][0]=='?'){
+			var con=x[0].substr(1).split('=')
+			obj.name = con[0]
+			obj.conditionValue = con[1]
+		}
+		cssFragmentMap.push(obj)
+	}
 }
 
 function compileCss(options){
 	var compiledCss=[OP_COM, JSON.stringify(options), CL_COM, '\n', options.docrule, '{']
-	for(var i in cssFragmentMap)
-		if(i=='default'||options[i])
+	for each(var i in cssFragmentMap)
+		if(!i.name
+			|| (i.name && !i.conditionValue && options[i.name])
+			|| options[i.name] == i.conditionValue
+			)
 			compiledCss.push(
-				cssFragmentMap[i].replace(/\$[^\$]*\$/g, function(x){
+				i.value.replace(/\$[^\$]*\$/g, function(x){
 					return options[x.slice(1,-1)]
 				})
 			);
@@ -131,6 +138,7 @@ if(window.location.href.indexOf(contentRoot)==-1){
 	updateStyle(true)
 }else{
 	window.options = options
+	window.cssFragmentMap = cssFragmentMap
 	window.defaultOptions = defaultOptions
 	window.initialOptions = extend(options)
 	window.compileCss = compileCss

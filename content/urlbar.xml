@@ -21,7 +21,7 @@
 				<xul:stack class="fission-progress-stack" flex="1" context="" >
 					<children includes="progressmeter"/>
 					<xul:hbox class="autocomplete-textbox-container-fission" >
-<xul:stack flex="1" anonid="stack" class="urlbar-stack">
+<xul:stack flex="1" anonid="stack" class="urlbar-stack1">
           
 <xul:hbox flex="1" >
 <xul:hbox flex="1" class="st-layers" >
@@ -75,6 +75,8 @@
 			this.layerManager.makePretty()
         this.inputField.removeEventListener("mousemove", this, false);
         this.plain = false;
+		// fix popup behaviour
+		this.popup.__proto__.onPopupClick = this.popupClick
     ]]></constructor>
 	<destructor><![CDATA[
         /**/
@@ -90,22 +92,17 @@
         document.getAnonymousElementByAttribute(this, "anonid", "stsegment-layer");
     </field>
     <field name="_focused"/>
-	<!-- <field name="smartTextContainer" readonly="true">
-        document.getAnonymousElementByAttribute(this, "anonid", "smart-text")
-    </field> -->
-
-
-
-    <field name="_tldService" readonly="true"><![CDATA[
-        Components.classes["@mozilla.org/network/effective-tld-service;1"]
-                  .getService(Components.interfaces.nsIEffectiveTLDService);
-    ]]></field>
+	
 
     <property name="contentIsCropped" onget="return false;" onset="return false;"/>
 
     <property name="value"
                 onget="return (this.hasAttribute('isempty') || this.hasAttribute('empty')) ? '' : this.inputField.value;">
         <setter><![CDATA[
+			try{
+				val = val.replace(/%../g, function(s){try{return decodeURIComponent(s)}catch(e){return s}});
+			}catch(e){}
+			
 			this.mIgnoreInput = true;
 			this.inputField.value = val;
 			this.mIgnoreInput = false;
@@ -114,9 +111,9 @@
 				if(this.plain)
 					this.layerManager.makePretty()
 			}
-			var event = document.createEvent("Events");
+			/*var event = document.createEvent("Events");
 			event.initEvent("ValueChange", true, true);
-			this.inputField.dispatchEvent(event);
+			this.inputField.dispatchEvent(event);*/
 			return val;
         ]]></setter>
       </property>
@@ -138,6 +135,53 @@
               this._hideURLTooltip();
               break;
           }*/
+        ]]></body>
+      </method>
+	  
+	  <method name="_getSelectedValueForClipboard">
+         <body><![CDATA[
+           // Grab the actual input field's value, not our value, which could include moz-action:
+           var inputVal = this.inputField.value;
+           var val = inputVal.substring(this.selectionStart, this.selectionEnd);
+           return val;
+         ]]></body>
+       </method>
+	  <method name="popupClick">
+        <parameter name="aEvent"/>
+        <body><![CDATA[
+        //  gURLBar.popup.__proto__.onPopupClick = function onPopupClick(aEvent) {
+			if (aEvent.button == 2) {
+				return;
+			}
+			var sel=getSelection(), val = sel.toString()
+			if(val){
+				Cc["@mozilla.org/widget/clipboardhelper;1"]
+							  .getService(Ci.nsIClipboardHelper)
+							  .copyString(val);
+				sel.removeAllRanges()
+				return
+			}
+			var controller = this.view.QueryInterface(Components.interfaces.nsIAutoCompleteController);
+			if (aEvent.button == 0 &&
+				!aEvent.shiftKey &&
+				!aEvent.ctrlKey && !aEvent.altKey && !aEvent.metaKey) {
+				controller.handleEnter(true);
+				return;
+			}
+			if (gURLBar && this.mInput == gURLBar) {
+				var url = controller.getValueAt(this.selectedIndex);
+				//this.closePopup();//controller.handleEscape();
+				let action = this.mInput._parseActionUrl(url);
+				if (action) {
+					if (action.type == "switchtab") {
+						url = action.param;
+					} else {
+						return;
+					}
+				}
+				//openLinkIn(url, whereToOpenLink(aEvent, false, true), {relatedToCurrent: true, fromChrome: false});
+				gBrowser.loadOneTab(url, {inBackground: true, relatedToCurrent: true});
+			}
         ]]></body>
       </method>
 	  	
@@ -166,8 +210,18 @@
 	getMarkedTokenList: function(st, en){
 		function sub(pt, sel, a, b){
 			var fr = pt.text.substring(a,b)
-			if(fr)
-				newList.push({text:fr, index:pt.index, class: pt.class+(sel?' selected marked':' marked')})
+			var class = pt.class + ' marked'
+			
+			if(!fr) return
+			if(sel) class += ' selected'
+			if(a) class += ' first'
+			if(b < pt.text.length) class += ' last'
+			
+			newList.push({
+				text: fr,
+				index: pt.index,
+				class: class
+			})
 		}
 		var newList = [], i=0, pt = this.tokenList[i], lastPos=0, st1, en1
 		//normalize marker
@@ -211,10 +265,6 @@
 		return newList;
 	},
 	
-	htmlEscape: function(str){
-		return str.replace(/[<&]/g, function(str) {return str == "&" ? "&amp;" : "&lt;";});
-	},
-	
 	createElem:function(className,is,ip){
 		if(ip<=is)
 			return
@@ -251,18 +301,17 @@
 		this.inds=[0]
 		var i1= url.indexOf(":")+1
 		url[i1]=='/' && ++i1 && url[i1]=='/' && ++i1
-		dump(i1)
 		this.createElem("protocol",0,i1);
 	//look for subdomain
 		var host = uri.host, is=i1;
 		if (host) {
 			try {
-				let baseDomain = gURLBar._tldService.getBaseDomainFromHost(host);
+				let baseDomain = Services.eTLD.getBaseDomainFromHost(host);
 				is+=host.lastIndexOf(baseDomain)
 			} catch (e) {}
 		}
 	//look for domain
-		var i2= url.indexOf("/",uri.scheme=='file'?i1+1:i1)
+		var i2= (url.match(/(:\/(?!\/))|([^:\/](\/))|(.\?)/)||{index:-2}).index+1//.indexOf("/", uri.scheme=='file'?i1+1:i1)
 		if(i2<0)
 			  i2=url.length	;
 	//create and fill subdomains
@@ -324,8 +373,9 @@
 		var pn=this.container
 		if(pn.scrollLeft+pn.clientWidth > pn.scrollWidth)
 			pn.scrollLeft = pn.scrollWidth
+		this.linkable=true
 	},
-	simpleSynch: function(url){
+	simpleSynch: function(url){		
 		this.inds=[0];
 		this.clear();
 		this.url=url
@@ -342,6 +392,7 @@
 		var pn=this.container
 		if(pn.scrollLeft+pn.clientWidth > pn.scrollWidth)
 			pn.scrollLeft = pn.scrollWidth
+		this.linkable=false
 	},
 	emptySynch: function(){
 		this.inds=[0];
@@ -456,20 +507,166 @@
 		this.moveSelectionToInputField(st, en);
 	},
 
+	getProtocolSuggestionHTML:function(){
+		var getAboutUrls=function(){
+			var l="@mozilla.org/network/protocol/about;1?what=", it;
+			var ans=[];
+			for(var i in Cc)
+				if(i.indexOf(l)==0){
+					ans.push('about:'+ i.substr(l.length))
+				}
+			return ans.sort()
+		}
+		var decode = function(url){
+			try{
+				return decodeURIComponent(url)			
+			}catch(e){
+				return url.replace(/%../g, function(s){try{return decodeURIComponent(s)}catch(e){return s}})
+			}
+		}
+		
+		var urlList=getAboutUrls()
+		urlList.unshift.apply(urlList, urlList.splice(urlList.indexOf('about:config'),1))//move about:config to top
+
+		for(var i=urlList.length; i--; )
+			urlList[i]={href:urlList[i], name:urlList[i]}
+		
+		//******************
+		urlList.unshift({href:'chrome://browser/content/places/places.xul',name: 'places'})
+		urlList.push({href:'chrome://browser/content/browser.xul',name: ':)'})
+
+		//****************** view-source
+		var url = this.url
+		//------------
+		var protocol = 'view-source:', i = protocol.length
+		if(url.substring(0, i)==protocol){
+			urlList.unshift({href: url.substr(i+1), name: protocol})
+		}else
+			urlList.unshift({href: protocol+url, name: protocol})
+		//------------
+		/*var protocol = 'http', i = protocol.length
+		if(url.substring(0, i)==protocol){
+			if(url[i]='s')
+				urlList.unshift({href: 'http'+url.substr(i+1), name: protocol})
+			else
+				urlList.unshift({href: 'https'+url.substr(i+1), name: 'https'})
+		}*/
+		//------------
+		var protocol = 'edit:', i = protocol.length
+		if(url.substring(0, i)==protocol){
+			urlList.unshift({href: url.substr(i+1), name: protocol})
+		}else
+			urlList.unshift({href: protocol+url, name: protocol})
+		//****** chrome, file, resource
+		try{
+			var uri = makeURI(url), file;
+						
+			if(uri.schemeIs('resource')){//about?
+				var ph=Services.io.getProtocolHandler('resource').QueryInterface(Ci.nsIResProtocolHandler)
+				var abspath=ph.getSubstitution(uri.host)
+				uri=Services.io.newURI(uri.path.substr(1), null, abspath)
+			}
+			while(uri.schemeIs('chrome')) 
+				uri=Cc["@mozilla.org/chrome/chrome-registry;1"].getService(Ci.nsIXULChromeRegistry).convertChromeURL(uri)
+
+			if(uri.schemeIs('file')){
+				file=uri.QueryInterface(Ci.nsIFileURL).file
+				urlList.unshift({href: file.path, name:'filePath', setValue: true})
+				if(file.leafName.match(/\.(jar|zip|docx|xlsx|xpi|crx|oex)$/))
+					urlList.unshift({href: 'jar:'+uri.spec+'!/', name:'jar:'})
+			}else if(uri.schemeIs('jar')&&decode(uri.spec)!=decode(url)){
+				urlList.unshift({href: decode(uri.spec), name:'jarPath', setValue: true})
+			}
+		}catch(e){}
+
+		var decoded=decode(this.url)
+		if(decoded!=this.url)
+			urlList.unshift({href: decoded, name:'decode', setValue: true})
+			
+		
+		//******************
+		var im=[]
+		var odd = false
+		for(var i=urlList.length; i--; ){
+			var toc = urlList[i]
+			im.unshift(				
+				'<stlink href="', toc.href.replace(/[<&"]/g, function(str) {return str == "&" ? "&amp;" : str =="<"? "&lt;":"&quote;"}), '"',
+						toc.setValue?" setValue='true'":'',
+						odd = !odd? " odd='true'":'', '>',
+					toc.name,
+				'</stlink>'
+			)
+		}
+		return im
+	},
+	showProtocolSuggestions: function(anchorElement){
+		var el =  document.getAnonymousElementByAttribute(gURLBar, "anonid", "contextPopup"), 
+			fc = document.createElementNS('http://www.w3.org/1999/xhtml','div')
+		if(!el){
+			el=document.createElement('panel')
+			el.className='stPopup'
+			el.setAttribute("anonid", "contextPopup")
+			//el.setAttribute("type", "autocomplete-richlistbox")
+			//el.setAttribute("ignorekeys", "true")
+			this.container.parentNode.appendChild(el)
+			el.setAttribute('onclick','gURLBar.selectionManager.openUri(event)')
+			el.setAttribute('onkeypress','dump(event)')
+			
+			
+		}else if(el.state=='open'){			
+			el.hidePopup()
+		}else{
+			while (el.hasChildNodes())
+				el.removeChild(el.lastChild);
+		}
+		
+		fc.innerHTML=this.getProtocolSuggestionHTML().join('')
+		
+		el.appendChild(fc);
+
+		/*var popupBoxObject = el.popupBoxObject;
+		popupBoxObject.setConsumeRollupEvent(popupBoxObject.ROLLUP_NO_CONSUME);
+		el.showPopup(anchorElement, -1, -1, "popup", "bottomleft", "topleft");*/
+		el.openPopup(this.container, "after_start", -50,0)
+		el.focus()
+	},
+	/*onProtocolPopupClick:function(){
+		
+	},*/
+	
 	hrefFromElement: function (el) {
-		var st, en ;
-		var ind = this.inds;
-		var i = parseInt(el.getAttribute('index'));
-		var url= this.url
+		var url = el.getAttribute('href')
+		if(el.getAttribute('setValue')) {
+			gURLBar.value = url;
+			return
+		}
+		if(url)return url
+			
+		var i = el.getAttribute('index')		
+		if(!i)return
+		
+		i = parseInt(i);
+		url= this.url
+		
+		var st, en, ind = this.inds;		
 		if(i>=ind.length-1){
 			st=0;en=ind[i-1]
 		}else {
 			st=ind[i];en=ind[i+1]
 		}
-		if(el.className==="subdomain"){
-			return url.substring(0, ind[0])+url.substring(ind[i+1], this.domainEnd)
+		if(el.classList.contains("subdomain")){
+			var newURL = url.substring(0, ind[0])+url.substring(ind[i+1], this.domainEnd)
 		}else
-			return url.substring(0, en)
+			var newURL =  url.substring(0, en)
+		//fixup jars
+		if(newURL.substring(0,4)=='jar:'){
+			if(newURL[newURL.length-1]=='!')
+				newURL = newURL+'/'
+			else if(newURL.indexOf('!')==-1)
+				newURL = newURL.substr(4)
+		}
+		
+		return newURL
 	},
 
 	selectFromRange: function () {
@@ -479,12 +676,16 @@
 			var st1 = st
 			st=en
 			en=st1
+		}else if(st==en){//
+			gURLBar.inputclicks.incrementClickCounter()
 		}
 		this.moveSelectionToInputField(st, en);
 	},
 	
 	openUri: function(event){
 		var href=this.hrefFromElement(event.originalTarget)
+		if(!href) 
+			return
 		var where = whereToOpenLink(event, false, true);
 		if (where == "current")
 			gURLBar.value=href;
@@ -502,27 +703,26 @@
 		else this.p.setSelectionRange(start,end)
 	},
 
-	onMouseUp: function(event, cursorMode){
+	onMouseUp: function(event, cursorMode){		
 		if(event.button==2){
 			this.moveSelectionToInputField();
 			document.getAnonymousElementByAttribute(gURLBar.inputBox,
 				'anonid','input-box-contextmenu').openPopup(null,1,event.clientX+1,event.clientY+1,true,true)
 		}else{
-			var isSel=this.anchorOffset!=this.focusOffset||cursorMode
+			var isSel=this.anchorOffset!=this.focusOffset || cursorMode
 			var state=this.state
-			var cls=event.originalTarget.className
-			if(cls=='empty'&&state!='left'){
+			var cls=event.originalTarget.classList
+			if(isSel || (cls.contains('empty')&&state!='left')){
 				this.selectFromRange();
-			}else if(isSel||(state==undefined && cls!=="protocol"&&cls!=="smart-text-end")/* ||( moveLen>10) */){
-				this.selectFromRange();
-			}else if(state=='left'||cls==="smart-text-end"||(state=='top' && cls==="protocol")){
+			}else if(state=='left' || cls.contains("smart-text-end")){
 				gURLBar.inputclicks.elipsisClick(event);
-			}else if(cls==="protocol"&&state==undefined){
-				this.selectFromElement(event.originalTarget)
-			}else if(state=='top' ){
-				this.openUri(event);
+			}else if(cls.contains("protocol")){
+				if(!state)
+					this.selectFromElement(event.originalTarget)
+				else
+					this.showProtocolSuggestions(event.originalTarget)
 			}else{
-				this.selectFromRange();
+				this.openUri(event);
 			}
 		}
 	},
@@ -533,7 +733,7 @@
 			this.moveSelectionToInputField()				
 			return
 		}
-		var self = this, x, y, cursorMode, startY = e.clientY
+		var self = this, x, y, cursorMode, startY = e.clientY, initialClassName = this.container.className
 		
 		var onMouseMove = function(e){
 			x = e.clientX, y = e.clientY
@@ -544,10 +744,12 @@
 					self.cursor.style.display = ''; 
 					cursorMode = true;
 					self.cursor.style.left = cursorRect.l + 'px'; 
+					self.container.classList.remove('top')
 				}
 			}else if(cursorMode){
 				self.cursor.style.display = 'none';
 				cursorMode = false
+				self.container.classList.add('top')
 			}
 			
 			if(newFocus==self.focusOffset)
@@ -557,13 +759,21 @@
 		}
 		
 		var onScrollInterval = function(){
-			//dump(x , visibleRect.left, visibleRect.right)
-			if(x < visibleRect.l){
-				self.container.scrollLeft += x - visibleRect.l
-				self.container.scrollLeft
-			}else if(x > visibleRect.r){
-				self.container.scrollLeft += x - visibleRect.r
-			}
+			//dump(x , visibleRect.l, visibleRect.r, visibleRect.scrollL, visibleRect.scrollW)
+			if(x < visibleRect.l && visibleRect.scrollL > 0){
+				var delta = x - visibleRect.l
+				if(visibleRect.scrollL + delta < 0)
+					delta = -visibleRect.scrollL				
+			}else if(x > visibleRect.r && visibleRect.scrollL < visibleRect.scrollW){
+				var delta = x - visibleRect.r
+				if(visibleRect.scrollL + delta > visibleRect.scrollW)
+					delta = visibleRect.scrollW - visibleRect.scrollL				
+			}else
+				return
+			
+			cursorRect.l -=delta
+			visibleRect.scrollL += delta
+			self.container.scrollLeft = visibleRect.scrollL
 		}
 		
 		var onMouseUp = function(){
@@ -571,6 +781,7 @@
 			window.removeEventListener("mouseup", onMouseUp, true);
 			clearInterval(timerId);
 			self.cursor.style.display = 'none'
+			self.container.className = initialClassName
 			self.onMouseUp(e, cursorMode)
 		}
 		
@@ -579,25 +790,34 @@
 		this.anchorOffset = this.focusOffset = this.offsetFromStart(e.rangeParent, e.rangeOffset)
 	
 	
-		this.container.setCapture(false)		
-		window.addEventListener("mouseup", onMouseUp, true);
-		window.addEventListener("mousemove", onMouseMove, true);
-		var timerId = setInterval(onScrollInterval, 40);
-
 		if(!this.cursor){
 			this.cursor = this.container.parentNode.appendChild(document.createElement('stcursor'))
 			this.cursor.style.cssText = 'border:1px solid;display:none;position:fixed;z-index:-1;pointer-events:none'
 		}
 		var visibleRect = this.container.getBoundingClientRect(), cursorRect = this.getEventPoint(e, this.anchorOffset)
 		visibleRect = {
-			m: visibleRect.top + visibleRect.height * 0.2,
+			m: visibleRect.top + visibleRect.height * 0.4,
 			h: visibleRect.height,
 			t: visibleRect.top,
 			l: visibleRect.left,
 			r: visibleRect.right,
-			b: cursorRect.b-2
+			b: cursorRect.b-2,
+			w: visibleRect.width,
+			scrollW: this.container.scrollWidth,
+			scrollL: this.container.scrollLeft
 		}
+		if(!this.linkable)
+			visibleRect.m = visibleRect.b+10 // non uris are always selectable
 		this.cursor.style.height = (visibleRect.h)+'px'
+		
+		this.container.setCapture(false)		
+		window.addEventListener("mouseup", onMouseUp, true);
+		window.addEventListener("mousemove", onMouseMove, true);
+
+		if(visibleRect.scrollW >= visibleRect.w)
+			var timerId = setInterval(onScrollInterval, 40);
+		
+		onMouseMove(e)
 	},
 	
 	getEventPoint: function(e, startOffset){
@@ -702,23 +922,29 @@
 		}
 	},
 
+	incrementClickCounter: function(reset){
+		clearTimeout(this.clickCountTimer);
+		if(reset){
+			this.clickCount=0
+			return
+		}
+		var self=this;						
+		this.clickCountTimer= setTimeout(function(){
+			self.clickCount=0
+		}, this.DBL_CLICK_SPEED+100*Math.min(this.clickCount,3))
+		this.clickCount++
+	},
+	
 	handleEvent: function (event) {
 	  switch (event.type) {
-		case "mousedown":
-			clearTimeout(this.clickCountTimer);
+		case "mousedown":			
 			if(event.button!=0){
-				clickCount=0
+				this.incrementClickCounter('reset')
 				return;
 			}
 			var p=this.p,l=p.value.length,e=event.rangeOffset;			
 			
-			var self=this;
-			//this.state=gURLBar.layerManager.elipsisMask.lastTarget.type
-			
-			this.clickCountTimer=window.setTimeout(function(){
-				self.clickCount=0
-			},this.DBL_CLICK_SPEED+100*Math.min(this.clickCount,3))
-			this.clickCount++
+			this.incrementClickCounter()
 			
 			var curpos=event.clientX+" "+event.clientY
 			if(e==l&&(this.clickCount!==1||curpos==this.lastPos)){
@@ -823,8 +1049,8 @@
 	containerElement: this.stsegmentLayer.parentNode,
 	init: function(){
 		//adding class first time resets original class somewhy
-		this.inputLayer.className='textbox-input-box plain smart-text-input'
-		this.smartLayer.className='smart-text '
+		//this.inputLayer.className='textbox-input-box plain smart-text-input'
+		//this.smartLayer.className='smart-text '
 
 		//
 		this.elipsisMask.addEventListener("mouseover",this.m1,true)
@@ -863,15 +1089,20 @@
 			return true;
 		}try {
 			var uri = makeURI(url, null, null);
-			uri = (typeof uri.host != "undefined") ? uri : null;
+			try {
+				uri = typeof uri.host != "undefined" ? uri : {};
+			} catch (e) {
+				uri = {};
+			}
 		}catch(e) {
 			uri = null;
 		}
+		
 		if (!uri) {
 			this.bar.selectionManager.simpleSynch(url);
 			return null;
 		}
-		this.bar.selectionManager.synch(uri,url);
+		this.bar.selectionManager.synch(uri, url);
 		return true;
 	},
 	m1: function(e){
