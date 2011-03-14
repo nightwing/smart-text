@@ -17,27 +17,28 @@
 	<button onclick="gModified=false;optionsToUi(initialOptions);applyStyleSheet()">reset</button>
 </hbox>
 <vbox oncommand="applyStyleSheet()" id='applyStyleSheet'>
-<grid tooltiptext="configure appearence of urlbar">
-	<columns>
-		<column flex="1"/>
-		<column flex="0"/>
-		<column flex="0"/>
-	</columns>
-	<rows flex="1" id="optionGrid">
-		<row align="center">
-			<label>font size</label>
-			<textbox id="fontSize" type="number" value="12" onkeyup1='applyStyleSheet()'/><label>px</label>
-		</row>
-		<row align="center">
-			<label>urlbar height</label>
-			<textbox id="barHeight" type="number" value="24" /><label>px</label>
-		</row>		
-	</rows>
-</grid>
+	<grid tooltiptext="configure appearence of urlbar">
+		<columns>
+			<column flex="1"/>
+			<column flex="0"/>
+			<column flex="0"/>
+		</columns>
+		<rows flex="1" id="optionGrid">
+			<row align="center">
+				<label>font size</label>
+				<textbox id="fontSize" type="number" value="12" onkeyup1='applyStyleSheet()'/><label>px</label>
+			</row>
+			<row align="center">
+				<label>urlbar height</label>
+				<textbox id="barHeight" type="number" value="24" /><label>px</label>
+			</row>		
+		</rows>
+	</grid>
 </vbox>	
 <hbox id="bottombox">
 	<menupopup id='context'>
 		<menuitem label='focus' oncommand="xblLiveEdit.update();aWin.focus()"/>
+		<menuitem label='focus2' oncommand="xblLiveEdit.update();aWin.focus();window.focus()"/>
 		<menuitem label='unregiter' oncommand="xblLiveEdit.update(false)"/>
 	</menupopup>
 	<button label="reload" oncommand="xblLiveEdit.update()" hidden='true' context='context'/>
@@ -75,15 +76,23 @@ function getParserStyleSheet(){
 }
 //todo: charset rules
 function setCSSRules(sheet, rules){
-	var n=sheet.cssRules.length
 	//clear
+	var n=sheet.cssRules.length
 	for(var i=0; i<n; ++i)
 		sheet.deleteRule(0)
 	//copy
 	n=rules.length
 	for(var i=0; i<n; ++i)try{
 		sheet.insertRule(rules[i].cssText, i)
+	}catch(e){dump(rules[i].cssText,'--------------')}	
+/*	//copy
+	var n=rules.length
+	for(var i=0; i<n; ++i)try{
+		sheet.insertRule(rules[i].cssText, i)
 	}catch(e){dump(rules[i].cssText,'--------------')}
+	//clear
+	for(var n=sheet.cssRules.length; n>i; --n)
+		sheet.deleteRule(i)*/
 }  
 
 function reloadStyleSheet(styleSheet, styleCode){
@@ -116,10 +125,10 @@ function findRuleInStyleSheet(styleSheet,text){
 	return findRuleInCSSRules(styleSheet.cssRules)
 }
 
-findStyleSheetByUri = function(awin, href) {
-	if(getClass(awin).indexOf('window')==-1) {//find stylesheet by element
+findStyleSheetByUri = function(aWinOrEl, href) {
+	if(getClass(aWinOrEl).indexOf('window')==-1) {//find stylesheet by element
 		var domUtils=Cc["@mozilla.org/inspector/dom-utils;1"].getService(Ci.inIDOMUtils)
-		var inspectedRules=domUtils.getCSSStyleRules(awin)
+		var inspectedRules=domUtils.getCSSStyleRules(aWinOrEl)
 		for (var i = 0; i < inspectedRules.Count(); ++i){
 			var rule = inspectedRules.GetElementAt(i) 
 			if(rule.parentStyleSheet.href.indexOf(href)>-1){
@@ -127,7 +136,7 @@ findStyleSheetByUri = function(awin, href) {
 			}
 		}
 	} else {
-		var ss = awin.document.styleSheets;
+		var ss = aWinOrEl.document.styleSheets;
 		for (var i = ss.length - 1; i >= 0; i--){
 		   var ahref=ss[i].href
 		   if (ahref&& ahref.indexOf(href)>-1) 
@@ -302,16 +311,11 @@ apllyStyleSheet=function(){
 */
 
 applyStyleSheet=function(styleCode){
-	if(xblLiveEdit.active){
-		
-		optionsFromUi(options)
-		xblLiveEdit.update()
-		return
-	}
 	gModified = true
 	optionsFromUi(options)
 	var styleCode = compileCss(options)
-	UAstyleSheet = findStyleSheetByUri(aWin.gURLBar, cssFileHref)
+	UAstyleSheet = findStyleSheetByUri(aWin.gURLBar, xblLiveEdit.active?
+										xblLiveEdit.getCssFileHref(): window.cssFileHref)
 	reloadStyleSheet(UAstyleSheet, styleCode)
 
 	//force redraw
@@ -337,9 +341,7 @@ saveChanges=function(){
 
 ]]></script>
 
-
 <script src='options.js'/>
-
 
 <script type="application/x-javascript"><![CDATA[
 /**************************************\     //***************************************
@@ -400,7 +402,8 @@ var xblLiveEdit = (function(){
 			save()			
 			/*this.activeWindow.activator.shutdown()
 			this.activeWindow = null*/
-		}
+		},
+		getCssFileHref: function()activeURI.spec
 	}
 })()
 /*
