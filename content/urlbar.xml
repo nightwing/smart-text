@@ -13,7 +13,7 @@
           xmlns:xul="http://www.mozilla.org/keymaster/gatekeeper/there.is.only.xul"
           xmlns:xbl="http://www.mozilla.org/xbl">
 	<binding id="urlbar" extends="chrome://browser/content/urlbarBindings.xml#urlbar" inheritstyle ="true">
-		<content sizetopopup="pref">
+		<content sizetopopup="pref" >
 			<xul:hbox class="autocomplete-textbox-container" flex="1">
 				<children includes="image|deck|stack|box">
 					<xul:image class="autocomplete-icon" allowevents="true"/>
@@ -23,7 +23,7 @@
     <children includes="progressmeter"/>
 
 <xul:hbox flex="1" >
-<xul:hbox flex="1" class="st-layers" >
+<xul:hbox flex="1" class="st-layers" context=''>
 	<xul:vbox flex="1" anonid="textbox-input-box" class="textbox-input-box plain " align="stretch">
 	   <xul:vbox anonid="textbox-input-box-inner" xbl:inherits="tooltiptext=inputtooltiptext"
 				 flex="1" >
@@ -64,6 +64,11 @@
 
     <implementation implements="nsIDOMEventListener, nsIObserver">
     <constructor><![CDATA[
+		
+/*gURLBar.addEventListener('mousedown',st=function(e){
+
+},true)*/
+		
 		this.__noSuchMethod__=dump
 		this.selectionManager.init()
 		this.inputclicks.init()
@@ -702,41 +707,48 @@
 		else this.p.setSelectionRange(start,end)
 	},
 
-	onMouseUp: function(event, cursorMode){		
-		if(event.button==2){
+	onMouseUp: function(e, cursorMode){		
+		if(e.button==2){
 			this.moveSelectionToInputField();
 			document.getAnonymousElementByAttribute(gURLBar.inputBox,
-				'anonid','input-box-contextmenu').openPopup(null,1,event.clientX+1,event.clientY+1,true,true)
+				'anonid','input-box-contextmenu').openPopup(null,1,e.clientX+1,e.clientY+1,true,true)
+			e.preventDefault()
+			e.stopPropagation()
 		}else{
 			var isSel=this.anchorOffset!=this.focusOffset || cursorMode
 			var state=this.state
-			var cls=event.originalTarget.classList
+			var cls=e.originalTarget.classList
 			if(isSel || (cls.contains('empty')&&state!='left')){
 				this.selectFromRange();
 			}else if(state=='left' || cls.contains("smart-text-end")){
-				gURLBar.inputclicks.elipsisClick(event);
+				gURLBar.inputclicks.elipsisClick(e);
 			}else if(cls.contains("protocol")){
 				if(!state)
-					this.selectFromElement(event.originalTarget)
+					this.selectFromElement(e.originalTarget)
 				else
-					this.showProtocolSuggestions(event.originalTarget)
+					this.showProtocolSuggestions(e.originalTarget)
 			}else{
-				this.openUri(event);
+				this.openUri(e);
 			}
 		}
 	},
 
 	handleEvent: function(e){
 		e.preventDefault()
+		e.stopPropagation()
+				
 		if(!this.p.value){
 			this.moveSelectionToInputField()				
 			return
 		}
 		var self = this, x, y, cursorMode, startY = e.clientY, initialClassName = this.container.className
 		
+		dump(e.rangeParent, e.rangeOffset, '[][][][][][][][][][][][][][][][][][]')
+		
 		var onMouseMove = function(e){
 			x = e.clientX, y = e.clientY
 			var newFocus = self.offsetFromStart(e.rangeParent, e.rangeOffset)	
+			dump(e.rangeParent, e.rangeOffset,newFocus)
 			
 			var xR=Math.abs(cursorRect.l-x)<10
 			if(self.anchorOffset == newFocus && (y < visibleRect[xR?'m':'t']  || y > visibleRect.b)  ){
@@ -782,6 +794,12 @@
 			clearInterval(timerId);
 			self.cursor.style.display = 'none'
 			self.container.className = initialClassName
+			
+			if(this.needsFocusFixup){
+				gURLBar.removeAttribute("focused")			
+				this.needsFocusFixup=false
+			}
+			
 			self.onMouseUp(e, cursorMode)
 		}
 		
@@ -1125,6 +1143,12 @@
 		</implementation>
     <handlers>
 <handler event="focus"><![CDATA[
+dump('--focus', this.mIgnoreFocus, this._focused, event.originalTarget)
+if(event.originalTarget == this){
+	event.preventDefault()
+	event.stopPropagation()
+	return
+}
 	//if (this.hasAttribute("focused"))
 	//	return;
 	//dump('--focus', this.mIgnoreFocus, this._focused, event.originalTarget)
@@ -1149,6 +1173,63 @@
 		}
 	}
 ]]></handler>
+<handler event="mousedown" phase="capturing">
+<![CDATA[
+dump('gurlbar 0----------------------------',event.clientY,this.hasAttribute("focused"),event.originalTarget)
+
+	if(event.originalTarget==this){
+		var r=this.stsegmentLayer.getBoundingClientRect()
+		dump('gurlbar 01----------------------------',event.clientY ,r.top, r.bottom)
+		if(r.left<event.clientX && event.clientX<r.right){
+			dump('inside')
+			event.preventDefault()
+			event.stopPropagation()
+			this.setAttribute("focused", true)
+			
+			this.selectionManager.needsFocusFixup=true
+			/*window.getInterface(Ci.nsIDOMWindowUtils).sendMouseEvent(
+				'mousedown',
+				event.clientX,
+				r.top+r.height/2,
+				event.button, event.clickCount, null
+			)*/
+		}
+	}
+
+
+//this.mIgnoreClick = true
+
+  
+]]>
+<handler event="mousedown" phase="capturing">
+<![CDATA[
+dump('gurlbar 1',event.clientY,this.hasAttribute("focused"),event.originalTarget)
+
+	if(event.originalTarget==this){
+		var r=this.stsegmentLayer.getBoundingClientRect()
+		dump('gurlbar 01----------------------------',event.clientY ,r.top, r.bottom)
+		if(r.left<event.clientX && event.clientX<r.right){
+			dump('inside')
+			event.preventDefault()
+			event.stopPropagation()
+			//this.setAttribute("focused", true)
+			
+			this.selectionManager.needsFocusFixup=true
+			/*window.getInterface(Ci.nsIDOMWindowUtils).sendMouseEvent(
+				'mousedown',
+				event.clientX,
+				r.top+r.height/2,
+				event.button, event.clickCount, null
+			)*/
+		}
+	}
+
+
+//this.mIgnoreClick = true
+
+  
+]]>
+</handler>
 	</handlers>
 		</binding>
 </bindings>
