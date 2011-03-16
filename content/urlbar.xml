@@ -23,7 +23,7 @@
     <children includes="progressmeter"/>
 
 <xul:hbox flex="1" >
-<xul:hbox flex="1" class="st-layers" context=''>
+<xul:hbox flex="1" class="st-layers">
 	<xul:vbox flex="1" anonid="textbox-input-box" class="textbox-input-box plain " align="stretch">
 	   <xul:vbox anonid="textbox-input-box-inner" xbl:inherits="tooltiptext=inputtooltiptext"
 				 flex="1" >
@@ -33,9 +33,9 @@
 		</xul:vbox>
 	</xul:vbox>
 
-	<html:hbox  anonid="stsegment-layer" class="smart-text" flex="1"  style="display:none;" 
+	<html:hbox  anonid="stsegment-layer" class="smart-text" flex="1"  style="display:none;"
 		ondragover="gURLBar.layerManager.makePlain()"  ondragexit="nsDragAndDrop.dragExit(event, gURLBar);"/>
-	
+
 
 	<xul:box anonid="overflow-ellipsis" class="smart-text-ellipsis" onclick="gURLBar.inputclicks.elipsisClick(event);"
 				style="-moz-user-select:none;-moz-box-align:center" ><html:div>...</html:div></xul:box>
@@ -62,13 +62,13 @@
 		</content>
 
 
-    <implementation implements="nsIDOMEventListener, nsIObserver">
-    <constructor><![CDATA[
-		
-/*gURLBar.addEventListener('mousedown',st=function(e){
+    <implementation implements=" nsIObserver">
+    <constructor><![CDATA[  //nsIDOMEventListener,
+		var p=this.parentNode
+		if(p.stMouseDown)
+			p.removeEventListener('mousedown',p.stMouseDown,true)
+		p.addEventListener('mousedown', p.stMouseDown = this.fixGURLBarPaddingClick, true)
 
-},true)*/
-		
 		this.__noSuchMethod__=dump
 		this.selectionManager.init()
 		this.inputclicks.init()
@@ -83,7 +83,7 @@
 		this.popup.__proto__.onPopupClick = this.popupClick
     ]]></constructor>
 	<destructor><![CDATA[
-        /**/
+        //
     ]]></destructor>
 
     <field name="inputBox">
@@ -96,7 +96,7 @@
         document.getAnonymousElementByAttribute(this, "anonid", "stsegment-layer");
     </field>
     <field name="_focused"/>
-	
+
 
     <property name="contentIsCropped" onget="return false;" onset="return false;"/>
 
@@ -106,7 +106,7 @@
 			try{
 				val = val.replace(/%../g, function(s){try{return decodeURIComponent(s)}catch(e){return s}});
 			}catch(e){}
-			
+
 			this.mIgnoreInput = true;
 			this.inputField.value = val;
 			this.mIgnoreInput = false;
@@ -141,7 +141,7 @@
           }*/
         ]]></body>
       </method>
-	  
+
 	  <method name="_getSelectedValueForClipboard">
          <body><![CDATA[
            // Grab the actual input field's value, not our value, which could include moz-action:
@@ -150,45 +150,64 @@
            return val;
          ]]></body>
        </method>
-	  <method name="popupClick">
-        <parameter name="aEvent"/>
-        <body><![CDATA[
-        //  gURLBar.popup.__proto__.onPopupClick = function onPopupClick(aEvent) {
-			if (aEvent.button == 2) {
+<method name="popupClick"><parameter name="aEvent"/><body><![CDATA[
+//  gURLBar.popup.__proto__.onPopupClick = function onPopupClick(aEvent) {
+	if (aEvent.button == 2) {
+		return;
+	}
+	var sel=getSelection(), val = sel.toString()
+	if(val){
+		Cc["@mozilla.org/widget/clipboardhelper;1"]
+					  .getService(Ci.nsIClipboardHelper)
+					  .copyString(val);
+		sel.removeAllRanges()
+		return
+	}
+	var controller = this.view.QueryInterface(Components.interfaces.nsIAutoCompleteController);
+	if (aEvent.button == 0 &&
+		!aEvent.shiftKey &&
+		!aEvent.ctrlKey && !aEvent.altKey && !aEvent.metaKey) {
+		controller.handleEnter(true);
+		return;
+	}
+	if (gURLBar && this.mInput == gURLBar) {
+		var url = controller.getValueAt(this.selectedIndex);
+		//this.closePopup();//controller.handleEscape();
+		let action = this.mInput._parseActionUrl(url);
+		if (action) {
+			if (action.type == "switchtab") {
+				url = action.param;
+			} else {
 				return;
 			}
-			var sel=getSelection(), val = sel.toString()
-			if(val){
-				Cc["@mozilla.org/widget/clipboardhelper;1"]
-							  .getService(Ci.nsIClipboardHelper)
-							  .copyString(val);
-				sel.removeAllRanges()
-				return
-			}
-			var controller = this.view.QueryInterface(Components.interfaces.nsIAutoCompleteController);
-			if (aEvent.button == 0 &&
-				!aEvent.shiftKey &&
-				!aEvent.ctrlKey && !aEvent.altKey && !aEvent.metaKey) {
-				controller.handleEnter(true);
-				return;
-			}
-			if (gURLBar && this.mInput == gURLBar) {
-				var url = controller.getValueAt(this.selectedIndex);
-				//this.closePopup();//controller.handleEscape();
-				let action = this.mInput._parseActionUrl(url);
-				if (action) {
-					if (action.type == "switchtab") {
-						url = action.param;
-					} else {
-						return;
-					}
-				}
-				//openLinkIn(url, whereToOpenLink(aEvent, false, true), {relatedToCurrent: true, fromChrome: false});
-				gBrowser.loadOneTab(url, {inBackground: true, relatedToCurrent: true});
-			}
-        ]]></body>
-      </method>
-	  	
+		}
+		//openLinkIn(url, whereToOpenLink(aEvent, false, true), {relatedToCurrent: true, fromChrome: false});
+		gBrowser.loadOneTab(url, {inBackground: true, relatedToCurrent: true});
+	}
+]]></body></method>
+<method name="fixGURLBarPaddingClick"><parameter name="event"/><body><![CDATA[
+	//needed to allow clicks on padding
+	if(event.originalTarget==gURLBar&&!gURLBar.fixPaddingClick_timeOut){
+		var r=gURLBar.stsegmentLayer.getBoundingClientRect()
+		if(r.left<event.clientX && event.clientX<r.right){
+			event.preventDefault()
+			event.stopPropagation()
+			var utils = (window.getInterface ||
+					window.QueryInterface(Ci.nsIInterfaceRequestor).getInterface)(Ci.nsIDOMWindowUtils)
+ 			gURLBar.layerManager.elipsisMask.style.display='none'
+ 			gURLBar.selectionManager.fixGURLBarPaddingClick=true
+			var args=['mousemove',event.clientX, r.top+2, event.button, event.clickCount, null]
+			utils.sendMouseEventToWindow.apply(utils, args)
+			utils.sendMouseEventToWindow.apply(utils, args)
+			utils.sendMouseEventToWindow.apply(utils, args)
+			this.fixPaddingClick_timeOut = true;
+			setTimeout('gURLBar.fixPaddingClick_timeOut=null', 10)
+			args[0]='mousedown'
+			utils.sendMouseEventToWindow.apply(utils, args)
+		}
+	}
+]]></body></method>
+
 <field name="selectionManager"><![CDATA[({
 	container : this.stsegmentLayer,
 	elemCount:0,
@@ -197,11 +216,11 @@
 		var div = document.createElementNS('http://www.w3.org/1999/xhtml','div')
 		div.className = 'smart-text-inner'
 		var html = []
-		;(tokenList||this.tokenList).forEach(function(x){			
+		;(tokenList||this.tokenList).forEach(function(x){
 			html.push(
-				'<stsegment class="', x.class, '" index="', x.index, '">', 
+				'<stsegment class="', x.class, '" index="', x.index, '">',
 					x.text.replace(/[<&]/g, function(str) {return str == "&" ? "&amp;" : "&lt;";}),
-				'</stsegment>' 
+				'</stsegment>'
 			)
 		})
 		div.innerHTML = html.join('')
@@ -210,17 +229,17 @@
 			el.removeChild(el.lastChild);
 		el.appendChild(div)
 	},
-	
+
 	getMarkedTokenList: function(st, en){
 		function sub(pt, sel, a, b){
 			var fr = pt.text.substring(a,b)
 			var class = pt.class + ' marked'
-			
+
 			if(!fr) return
 			if(sel) class += ' selected'
 			if(a) class += ' first'
 			if(b < pt.text.length) class += ' last'
-			
+
 			newList.push({
 				text: fr,
 				index: pt.index,
@@ -233,9 +252,9 @@
 			st1=st; st=en; en=st1
 		} else if(st == en)
 			return this.tokenList
-			
+
 		//before marker start
-		while(pt && pt.endPos <= st){		
+		while(pt && pt.endPos <= st){
 			sub(pt, false)
 			lastPos = pt.endPos
 			pt = this.tokenList[++i]
@@ -253,22 +272,22 @@
 			//next token
 			lastPos = pt.endPos
 			pt = this.tokenList[++i]
-			while(pt && pt.endPos <= en){		
+			while(pt && pt.endPos <= en){
 				sub(pt, true)
 				lastPos=pt.endPos
 				pt = this.tokenList[++i]
 			}
 			sub(pt, true, 0, en-lastPos)
-			sub(pt, false, en-lastPos)			
-		}		
-		
+			sub(pt, false, en-lastPos)
+		}
+
 		//after marker end
 		while(pt = this.tokenList[++i])
 			sub(pt, false)
-		
+
 		return newList;
 	},
-	
+
 	createElem:function(className,is,ip){
 		if(ip<=is)
 			return
@@ -291,11 +310,10 @@
 
 	clear : function(){
 		this.elemCount=0
-		this.tokenList=[]		
+		this.tokenList=[]
 	},
-	
+
 	synch: function(uri,url){
-	//dump("oooo",url,uri)
 		this.clear();
 		this.url=url;
 		var i1
@@ -365,7 +383,7 @@
 			this.createElem("index",i4,url.length);
 		}
 
-	//append flex at end		
+	//append flex at end
 		this.tokenList.push({
 			index: ++this.elemCount,
 			text: '',
@@ -379,7 +397,7 @@
 			pn.scrollLeft = pn.scrollWidth
 		this.linkable=true
 	},
-	simpleSynch: function(url){		
+	simpleSynch: function(url){
 		this.inds=[0];
 		this.clear();
 		this.url=url
@@ -407,7 +425,7 @@
 	},
 
 	p: document.getAnonymousElementByAttribute(this, "anonid", "input"),
-	
+
 	init: function(){
 		this.p.addEventListener("DOMMouseScroll", function(e){
 			if(e.ctrlKey){
@@ -438,7 +456,7 @@
 
 		this.container.addEventListener("mousedown", this, true);
 	},
-	
+
 	scrollNumbers: function(text,offset,amount){
 		var m=parseInt(text.charAt(offset))
 		if(isNaN(m))
@@ -485,7 +503,7 @@
 		this.url=this.p.value=text
 		this.tokenList[index].text = text
 		this.tokenList[index].endPos += len
-		
+
 		if(len!=0){
 			for(var i=index+1;i<inds.length;i++){
 				inds[i]+=len
@@ -523,18 +541,18 @@
 		}
 		var decode = function(url){
 			try{
-				return decodeURIComponent(url)			
+				return decodeURIComponent(url)
 			}catch(e){
 				return url.replace(/%../g, function(s){try{return decodeURIComponent(s)}catch(e){return s}})
 			}
 		}
-		
+
 		var urlList=getAboutUrls()
 		urlList.unshift.apply(urlList, urlList.splice(urlList.indexOf('about:config'),1))//move about:config to top
 
 		for(var i=urlList.length; i--; )
 			urlList[i]={href:urlList[i], name:urlList[i]}
-		
+
 		//******************
 		urlList.unshift({href:'chrome://browser/content/places/places.xul',name: 'places'})
 		urlList.push({href:'chrome://browser/content/browser.xul',name: ':)'})
@@ -564,13 +582,13 @@
 		//****** chrome, file, resource
 		try{
 			var uri = makeURI(url), file;
-						
+
 			if(uri.schemeIs('resource')){//about?
 				var ph=Services.io.getProtocolHandler('resource').QueryInterface(Ci.nsIResProtocolHandler)
 				var abspath=ph.getSubstitution(uri.host)
 				uri=Services.io.newURI(uri.path.substr(1), null, abspath)
 			}
-			while(uri.schemeIs('chrome')) 
+			while(uri.schemeIs('chrome'))
 				uri=Cc["@mozilla.org/chrome/chrome-registry;1"].getService(Ci.nsIXULChromeRegistry).convertChromeURL(uri)
 
 			if(uri.schemeIs('file')){
@@ -586,14 +604,14 @@
 		var decoded=decode(this.url)
 		if(decoded!=this.url)
 			urlList.unshift({href: decoded, name:'decode', setValue: true})
-			
-		
+
+
 		//******************
 		var im=[]
 		var odd = false
 		for(var i=urlList.length; i--; ){
 			var toc = urlList[i]
-			im.unshift(				
+			im.unshift(
 				'<stlink href="', toc.href.replace(/[<&"]/g, function(str) {return str == "&" ? "&amp;" : str =="<"? "&lt;":"&quote;"}), '"',
 						toc.setValue?" setValue='true'":'',
 						odd = !odd? " odd='true'":'', '>',
@@ -604,7 +622,7 @@
 		return im
 	},
 	showProtocolSuggestions: function(anchorElement){
-		var el =  document.getAnonymousElementByAttribute(gURLBar, "anonid", "contextPopup"), 
+		var el =  document.getAnonymousElementByAttribute(gURLBar, "anonid", "contextPopup"),
 			fc = document.createElementNS('http://www.w3.org/1999/xhtml','div')
 		if(!el){
 			el=document.createElement('panel')
@@ -615,17 +633,17 @@
 			this.container.parentNode.appendChild(el)
 			el.setAttribute('onclick','gURLBar.selectionManager.openUri(event)')
 			el.setAttribute('onkeypress','dump(event)')
-			
-			
-		}else if(el.state=='open'){			
+
+
+		}else if(el.state=='open'){
 			el.hidePopup()
 		}else{
 			while (el.hasChildNodes())
 				el.removeChild(el.lastChild);
 		}
-		
+
 		fc.innerHTML=this.getProtocolSuggestionHTML().join('')
-		
+
 		el.appendChild(fc);
 
 		/*var popupBoxObject = el.popupBoxObject;
@@ -635,9 +653,9 @@
 		el.focus()
 	},
 	/*onProtocolPopupClick:function(){
-		
+
 	},*/
-	
+
 	hrefFromElement: function (el) {
 		var url = el.getAttribute('href')
 		if(el.getAttribute('setValue')) {
@@ -645,14 +663,14 @@
 			return
 		}
 		if(url)return url
-			
-		var i = el.getAttribute('index')		
+
+		var i = el.getAttribute('index')
 		if(!i)return
-		
+
 		i = parseInt(i);
 		url= this.url
-		
-		var st, en, ind = this.inds;		
+
+		var st, en, ind = this.inds;
 		if(i>=ind.length-1){
 			st=0;en=ind[i-1]
 		}else {
@@ -669,7 +687,7 @@
 			else if(newURL.indexOf('!')==-1)
 				newURL = newURL.substr(4)
 		}
-		
+
 		return newURL
 	},
 
@@ -685,10 +703,10 @@
 		}
 		this.moveSelectionToInputField(st, en);
 	},
-	
+
 	openUri: function(event){
 		var href=this.hrefFromElement(event.originalTarget)
-		if(!href) 
+		if(!href)
 			return
 		var where = whereToOpenLink(event, false, true);
 		if (where == "current")
@@ -701,17 +719,24 @@
 	moveSelectionToInputField: function(start,end){
 		gURLBar.layerManager.makePlain();
 		this.p.focus();
-		
+
 		if(typeof start!=="number"||typeof end!=="number")
 			this.p.select()
 		else this.p.setSelectionRange(start,end)
 	},
 
-	onMouseUp: function(e, cursorMode){		
+	onMouseUp: function(e, cursorMode){
+		if(this.fixGURLBarPaddingClick){
+			gURLBar.layerManager.elipsisMask.style.display=''
+ 			this.fixGURLBarPaddingClick=false
+		}
 		if(e.button==2){
-			this.moveSelectionToInputField();
-			document.getAnonymousElementByAttribute(gURLBar.inputBox,
-				'anonid','input-box-contextmenu').openPopup(null,1,e.clientX+1,e.clientY+1,true,true)
+			if(this.anchorOffset!= this.focusOffset)
+				this.selectFromRange()
+			else
+				this.moveSelectionToInputField();
+			setTimeout(function()document.getAnonymousElementByAttribute(gURLBar.inputBox,
+				'anonid','input-box-contextmenu').openPopup(null,1,e.clientX+1,e.clientY+1,true,true),20)
 			e.preventDefault()
 			e.stopPropagation()
 		}else{
@@ -721,7 +746,10 @@
 			if(isSel || (cls.contains('empty')&&state!='left')){
 				this.selectFromRange();
 			}else if(state=='left' || cls.contains("smart-text-end")){
-				gURLBar.inputclicks.elipsisClick(e);
+				if(e.button==1)
+					this.showProtocolSuggestions(e.originalTarget)
+				else
+					this.moveSelectionToInputField();
 			}else if(cls.contains("protocol")){
 				if(!state)
 					this.selectFromElement(e.originalTarget)
@@ -736,26 +764,24 @@
 	handleEvent: function(e){
 		e.preventDefault()
 		e.stopPropagation()
-				
+
 		if(!this.p.value){
-			this.moveSelectionToInputField()				
+			this.moveSelectionToInputField()
+			this.fixGURLBarPaddingClick=false
 			return
 		}
 		var self = this, x, y, cursorMode, startY = e.clientY, initialClassName = this.container.className
-		
-		dump(e.rangeParent, e.rangeOffset, '[][][][][][][][][][][][][][][][][][]')
-		
+
 		var onMouseMove = function(e){
 			x = e.clientX, y = e.clientY
-			var newFocus = self.offsetFromStart(e.rangeParent, e.rangeOffset)	
-			dump(e.rangeParent, e.rangeOffset,newFocus)
-			
+			var newFocus = self.offsetFromStart(e.rangeParent, e.rangeOffset)
+
 			var xR=Math.abs(cursorRect.l-x)<10
 			if(self.anchorOffset == newFocus && (y < visibleRect[xR?'m':'t']  || y > visibleRect.b)  ){
 				if(!cursorMode){
-					self.cursor.style.display = ''; 
+					self.cursor.style.display = '';
 					cursorMode = true;
-					self.cursor.style.left = cursorRect.l + 'px'; 
+					self.cursor.style.left = cursorRect.l + 'px';
 					self.container.classList.remove('top')
 				}
 			}else if(cursorMode){
@@ -763,51 +789,44 @@
 				cursorMode = false
 				self.container.classList.add('top')
 			}
-			
+
 			if(newFocus==self.focusOffset)
 				return
 			self.focusOffset = newFocus;
 			self.setInnerHTML(self.getMarkedTokenList(self.anchorOffset, self.focusOffset))
 		}
-		
+
 		var onScrollInterval = function(){
-			//dump(x , visibleRect.l, visibleRect.r, visibleRect.scrollL, visibleRect.scrollW)
 			if(x < visibleRect.l && visibleRect.scrollL > 0){
 				var delta = x - visibleRect.l
 				if(visibleRect.scrollL + delta < 0)
-					delta = -visibleRect.scrollL				
+					delta = -visibleRect.scrollL
 			}else if(x > visibleRect.r && visibleRect.scrollL < visibleRect.scrollW){
 				var delta = x - visibleRect.r
 				if(visibleRect.scrollL + delta > visibleRect.scrollW)
-					delta = visibleRect.scrollW - visibleRect.scrollL				
+					delta = visibleRect.scrollW - visibleRect.scrollL
 			}else
 				return
-			
+
 			cursorRect.l -=delta
 			visibleRect.scrollL += delta
 			self.container.scrollLeft = visibleRect.scrollL
 		}
-		
+
 		var onMouseUp = function(){
 			window.removeEventListener("mousemove", onMouseMove, true);
 			window.removeEventListener("mouseup", onMouseUp, true);
 			clearInterval(timerId);
 			self.cursor.style.display = 'none'
 			self.container.className = initialClassName
-			
-			if(this.needsFocusFixup){
-				gURLBar.removeAttribute("focused")			
-				this.needsFocusFixup=false
-			}
-			
 			self.onMouseUp(e, cursorMode)
 		}
-		
-				
-		this.state = gURLBar.layerManager.elipsisMask.lastTarget.type			
+
+
+		this.state = gURLBar.layerManager.lastTarget.type
 		this.anchorOffset = this.focusOffset = this.offsetFromStart(e.rangeParent, e.rangeOffset)
-	
-	
+
+
 		if(!this.cursor){
 			this.cursor = this.container.parentNode.appendChild(document.createElement('stcursor'))
 			this.cursor.style.cssText = 'border:1px solid;display:none;position:fixed;z-index:-1;pointer-events:none'
@@ -827,17 +846,17 @@
 		if(!this.linkable)
 			visibleRect.m = visibleRect.b+10 // non uris are always selectable
 		this.cursor.style.height = (visibleRect.h)+'px'
-		
-		this.container.setCapture(false)		
+
+		this.container.setCapture(false)
 		window.addEventListener("mouseup", onMouseUp, true);
 		window.addEventListener("mousemove", onMouseMove, true);
 
 		if(visibleRect.scrollW >= visibleRect.w)
 			var timerId = setInterval(onScrollInterval, 40);
-		
-		onMouseMove(e)
+
+		this.state=='left'||onMouseMove(e)
 	},
-	
+
 	getEventPoint: function(e, startOffset){
 		var node = e.rangeParent, offset = e.rangeOffset
 		if(node.nodeType != 3) try{
@@ -850,17 +869,17 @@
 				offset = 0
 			}
 		}catch(e){return {left:0, height:0}}
-		
+
 		var range = document.createRange();
-		
+
 		range.setStart(node, offset)
 		range.setStart(node, offset)
 		var b1 = range.getBoundingClientRect()
 		range.detach()
-		
+
 		return {l:b1.left, h:b1.height, b:b1.bottom}
 	},
-	
+
 
 	offsetFromStart: function(node, offset) {
 		function getLength(node){
@@ -889,9 +908,9 @@
 				l+=getLength(ch[i])
 			return l
 		}
-		
+
 		var l = getLength2(node, offset)
-				
+
 		while(node && node !== this.container){
 			var newNode = node.previousSibling
 			while(newNode){
@@ -899,7 +918,7 @@
 				newNode = newNode.previousSibling
 			}
 			node = node.parentNode;
-		}		
+		}
 		return  l
 	}
 })]]> </field>
@@ -946,33 +965,33 @@
 			this.clickCount=0
 			return
 		}
-		var self=this;						
+		var self=this;
 		this.clickCountTimer= setTimeout(function(){
 			self.clickCount=0
 		}, this.DBL_CLICK_SPEED+100*Math.min(this.clickCount,3))
 		this.clickCount++
 	},
-	
+
 	handleEvent: function (event) {
 	  switch (event.type) {
-		case "mousedown":			
+		case "mousedown":
 			if(event.button!=0){
 				this.incrementClickCounter('reset')
 				return;
 			}
-			var p=this.p,l=p.value.length,e=event.rangeOffset;			
-			
+			var p=this.p,l=p.value.length,e=event.rangeOffset;
+
 			this.incrementClickCounter()
-			
+
 			var curpos=event.clientX+" "+event.clientY
 			if(e==l&&(this.clickCount!==1||curpos==this.lastPos)){
-				if(event.detail>1)this.stopEvent(event)				
-				if(p.selectionStart==l&&p.selectionEnd==l){				
+				if(event.detail>1)this.stopEvent(event)
+				if(p.selectionStart==l&&p.selectionEnd==l){
 					p.selectionStart=0
-					this.ecbc=1			
+					this.ecbc=1
 				}else if(p.selectionStart==0&&p.selectionEnd==l){
 					p.selectionStart=e
-					this.ecbc=2				
+					this.ecbc=2
 				}
 			}else if(this.clickCount === 1){
 			   if(event.detail>1){
@@ -992,12 +1011,12 @@
 				this.stopEvent(event)
 			}
 			this.lastPos=curpos
-			break;			
+			break;
 		case "mouseup":
 			//handle clicking at end
-			if(event.button==0&&this.ecbc){			   
+			if(event.button==0&&this.ecbc){
 				this.p.selectionStart=(this.ecbc==1?0:event.rangeOffset)
-				this.ecbc=false 
+				this.ecbc=false
 				this.clickCount=0
 			}
 			break;
@@ -1066,17 +1085,12 @@
 
 	containerElement: this.stsegmentLayer.parentNode,
 	init: function(){
-		//adding class first time resets original class somewhy
-		//this.inputLayer.className='textbox-input-box plain smart-text-input'
-		//this.smartLayer.className='smart-text '
+		this.elipsisMask.addEventListener("mouseover", this, true)
+		var l = this.elipsisMask.lastChild
+		l.type = 'left'
+		l.previousSibling.lastChild.type = 'top'
 
-		//
-		this.elipsisMask.addEventListener("mouseover",this.m1,true)
-		var l=this.elipsisMask.lastChild
-		l.type='left'
-		l.previousSibling.lastChild.type='top'
-
-		this.elipsisMask.lastTarget=l
+		this.lastTarget=l
 	},
 	makePretty: function(){
 		this.elipsisMask.style.display=""
@@ -1115,7 +1129,7 @@
 		}catch(e) {
 			uri = null;
 		}
-		
+
 		if (!uri) {
 			this.bar.selectionManager.simpleSynch(url);
 			return null;
@@ -1123,8 +1137,8 @@
 		this.bar.selectionManager.synch(uri, url);
 		return true;
 	},
-	m1: function(e){
-		var [l1,l2]=[this.lastTarget,e.target]
+	handleEvent: function(e){
+		var [l1,l2]=[this.lastTarget, e.target]
 		var clist=gURLBar.plain? gURLBar.layerManager.inputLayer.classList:
 								 gURLBar.layerManager.smartLayer.classList;
 		l1.type&&clist.remove(l1.type)
@@ -1143,12 +1157,6 @@
 		</implementation>
     <handlers>
 <handler event="focus"><![CDATA[
-dump('--focus', this.mIgnoreFocus, this._focused, event.originalTarget)
-if(event.originalTarget == this){
-	event.preventDefault()
-	event.stopPropagation()
-	return
-}
 	//if (this.hasAttribute("focused"))
 	//	return;
 	//dump('--focus', this.mIgnoreFocus, this._focused, event.originalTarget)
@@ -1173,63 +1181,6 @@ if(event.originalTarget == this){
 		}
 	}
 ]]></handler>
-<handler event="mousedown" phase="capturing">
-<![CDATA[
-dump('gurlbar 0----------------------------',event.clientY,this.hasAttribute("focused"),event.originalTarget)
-
-	if(event.originalTarget==this){
-		var r=this.stsegmentLayer.getBoundingClientRect()
-		dump('gurlbar 01----------------------------',event.clientY ,r.top, r.bottom)
-		if(r.left<event.clientX && event.clientX<r.right){
-			dump('inside')
-			event.preventDefault()
-			event.stopPropagation()
-			this.setAttribute("focused", true)
-			
-			this.selectionManager.needsFocusFixup=true
-			/*window.getInterface(Ci.nsIDOMWindowUtils).sendMouseEvent(
-				'mousedown',
-				event.clientX,
-				r.top+r.height/2,
-				event.button, event.clickCount, null
-			)*/
-		}
-	}
-
-
-//this.mIgnoreClick = true
-
-  
-]]>
-<handler event="mousedown" phase="capturing">
-<![CDATA[
-dump('gurlbar 1',event.clientY,this.hasAttribute("focused"),event.originalTarget)
-
-	if(event.originalTarget==this){
-		var r=this.stsegmentLayer.getBoundingClientRect()
-		dump('gurlbar 01----------------------------',event.clientY ,r.top, r.bottom)
-		if(r.left<event.clientX && event.clientX<r.right){
-			dump('inside')
-			event.preventDefault()
-			event.stopPropagation()
-			//this.setAttribute("focused", true)
-			
-			this.selectionManager.needsFocusFixup=true
-			/*window.getInterface(Ci.nsIDOMWindowUtils).sendMouseEvent(
-				'mousedown',
-				event.clientX,
-				r.top+r.height/2,
-				event.button, event.clickCount, null
-			)*/
-		}
-	}
-
-
-//this.mIgnoreClick = true
-
-  
-]]>
-</handler>
 	</handlers>
 		</binding>
 </bindings>

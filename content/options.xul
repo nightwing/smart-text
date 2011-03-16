@@ -39,6 +39,7 @@
 	<menupopup id='context'>
 		<menuitem label='focus' oncommand="xblLiveEdit.update();aWin.focus()"/>
 		<menuitem label='focus2' oncommand="xblLiveEdit.update();aWin.focus();window.focus()"/>
+		<menuitem label='removeAndAdd' oncommand="xblLiveEdit.removeAndAdd();aWin.focus();window.focus()"/>
 		<menuitem label='unregiter' oncommand="xblLiveEdit.update(false)"/>
 	</menupopup>
 	<button label="reload" oncommand="xblLiveEdit.update()" hidden='true' context='context'/>
@@ -388,6 +389,12 @@ var xblLiveEdit = (function(){
 			return "data:text/xml" + ";base64," + btoa(text);
 	}
 	
+	function removeAndAdd(el){
+		var p=el.parentNode,ns=el.nextSibling;
+		p.removeChild(el)
+		ns?p.insertBefore(el,ns):p.appendChild(el)
+	}
+	
 	return {
 		update: function(unregister){
 			updateStyle(unregister==undefined||unregister, true)
@@ -403,7 +410,8 @@ var xblLiveEdit = (function(){
 			/*this.activeWindow.activator.shutdown()
 			this.activeWindow = null*/
 		},
-		getCssFileHref: function()activeURI.spec
+		getCssFileHref: function()activeURI.spec,
+		removeAndAdd: function()removeAndAdd(aWin.gURLBar)
 	}
 })()
 /*

@@ -118,7 +118,7 @@ stsegment{
 }
 
 /**==?progressmeter==**/
-#urlbar-progress-alt{border:none!important;margin:0!important;padding:0!important;}
+#urlbar-progress-alt{border:none!important;margin:0!important;padding:0!important;pointer-events:none}
 #urlbar-progress-alt > spacer{border:none!important;margin:0!important;padding:0!important;}
 #urlbar-progress-alt>.progress-bar {
 	background:none!important;
@@ -155,7 +155,7 @@ stsegment.basedomain.first{
 stsegment.basedomain.last{
 	padding-right:0px!important /**==?bubble==**/
 }
-/**==?arrow==**/
+/**==?arrow=1==**/
 stsegment.basedomain:not(.last)+stsegment::before{
 	width: 10px;
 	content:'\25B6';
@@ -165,4 +165,11 @@ stsegment.basedomain:not(.last)+stsegment::before{
 	background-image: -moz-image-rect(url('chrome://smarttext/content/ce/breadcrumb.png'), 0%, 100%,100%,60%); 
 	background-position:left 50%;
 	background-repeat:no-repeat;*/
+}
+/**==?arrow==**/
+stsegment.basedomain:not(.last)+stsegment::before{
+	content:'  ';
+	background-image: -moz-image-rect(url('chrome://smarttext/content/ce/breadcrumb.png'), 0%, 90%,100%,68%); 
+	background-position:left 50%;
+	background-repeat:no-repeat;
 }

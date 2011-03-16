@@ -33,7 +33,6 @@ loadIntoWindow=function(mWindow){
 
 function startup() {
 	//Components.utils.import("resource://gre/modules/Services.jsm");
-	Components.utils.reportError('dddd')
 	var file=getCssFile()
 	if(file.exists())
 		updateStyle(true, file)
