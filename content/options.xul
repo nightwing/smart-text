@@ -12,9 +12,10 @@
 
 <prefpane flex="1">
 <hbox>
-	<button onclick="reloadWin()">reload</button>
+	<button onclick="reloadWin()" label="reload"/>
+	<shadiaglue style='display:none;-moz-binding: url("chrome://shadia/content/bindings/debug.xml#shadiaGlue");'/> 
 	<spacer flex='1'/>
-	<button onclick="gModified=false;optionsToUi(initialOptions);applyStyleSheet()">reset</button>
+	<button onclick="gModified=false;optionsToUi(initialOptions);applyStyleSheet()" label='reset'/>
 </hbox>
 <vbox oncommand="applyStyleSheet()" id='applyStyleSheet'>
 	<grid tooltiptext="configure appearence of urlbar">
@@ -46,7 +47,7 @@
 	<button label="liveEditXBL" oncommand="toggleLiveXBLEditing(this)" 
 	tooltiptext='reload urlbar.xml (:for developers:)' type='checkbox'/>
 	<spacer flex="10"/>
-	<button label="save" oncommand="window.close()//saveChanges()//"/>
+	<button label="done" oncommand="window.close()//saveChanges()//"/>
 </hbox>
 </prefpane>
 
@@ -208,8 +209,15 @@ addCheckboxes=function(config){
 				<label>$descr$</label>
 				<checkbox id="$id$" /><label> </label>
 			</row>.toXMLString()
+	var xmlFrag2 = <row align="center">
+				<label>$descr$</label>
+				<radiogroup orient="horizontal" id="$id$">
+					$content$
+				</radiogroup>
+			</row>.toXMLString()
 	var chFrag = <checkbox id="$0$" label="$1$" style='display:inline'/>.toXMLString()
-	 optionGridXML = [], checkboxListXML=[]
+	var div = "<div style='width:100%;position:relative;display:block'>"
+	var optionGridXML = [], checkboxListXML=[]
 	
 	gConfig.forEach(function(x){
 		if(x.type=='number')
@@ -217,11 +225,15 @@ addCheckboxes=function(config){
 		else if(x.type=='checkbox')		
 			optionGridXML.push(formatString(xmlFrag, x))
 		else if(x.type=='checkboxList'){
-			var ans=['<groupbox><caption label="'+x.descr+'"/>',"<div style='width:100%;position:relative;display:block'>"]
+			var ans=['<groupbox><caption label="'+x.descr+'"/>',div]
 			for(var i in x.subs)
 				ans.push(formatString(chFrag, [i, x.subs[i]]))
 			ans.push('</div></groupbox>')
 			checkboxListXML.push(ans.join(''))
+		}else if(x.type=='radiogroup'){			
+			x.content=Array(x.len+1).join('<radio></radio>')
+			ui=x
+			optionGridXML.push(formatString(xmlFrag2, x))
 		}
 	})
 	dump(checkboxListXML)
@@ -235,9 +247,9 @@ gConfig = [
 	{id:'fontSize', descr: '', type: 'number'},
 	{id:'barHeight', descr: '', type: 'number'},//TODO
 	{id:'progressmeter', descr: 'status4evar\'s progressmeter', type: 'checkbox'},
-	{id:'arrow', descr: 'arrow after domain', type: 'checkbox'},
+	{id:'arrow', descr: 'arrow after domain', len:5, type: 'radiogroup'},
 	{id:'boldDomain', descr: 'bold domain', type: 'checkbox'},
-	{id:'bubble', descr: 'bubble around domain', type: 'checkbox'},
+	{id:'bubble', descr: 'bubble around domain', len:3, type: 'radiogroup'},
 	{id:'hide', descr: 'hide', subs: {
 		HTTP: 'http://',
 		go: 'go button',
@@ -257,7 +269,8 @@ optionsFromUi = function(options){
 				if($(i).checked)
 					ans.push(i)
 			options[x.id] = ans.length? ans: null
-		}			
+		}else if(x.type=='radiogroup')
+			options[x.id] = $(x.id).selectedIndex
 	})
 	
 	options.lineHeight = Math.ceil( options.fontSize*1.2 )	
@@ -281,7 +294,8 @@ optionsToUi = function(options){
 			var ans=options[x.id]||[]
 			for(var i in x.subs)
 				$(i).checked=ans.indexOf(i)>-1
-		}
+		}else if(x.type=='radiogroup')
+			$(x.id).selectedIndex = options[x.id]||0
 	})
 }
 

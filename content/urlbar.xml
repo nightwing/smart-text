@@ -560,11 +560,9 @@
 		//****************** view-source
 		var url = this.url
 		//------------
-		var protocol = 'view-source:', i = protocol.length
-		if(url.substring(0, i)==protocol){
-			urlList.unshift({href: url.substr(i+1), name: protocol})
-		}else
-			urlList.unshift({href: protocol+url, name: protocol})
+		urlList.unshift({href: 'view-source:', name: 'view-source:', action: 'toggle'})
+		urlList.unshift({href: 'edit:', name: 'edit:', action: 'toggle'})
+		
 		//------------
 		/*var protocol = 'http', i = protocol.length
 		if(url.substring(0, i)==protocol){
@@ -574,11 +572,7 @@
 				urlList.unshift({href: 'https'+url.substr(i+1), name: 'https'})
 		}*/
 		//------------
-		var protocol = 'edit:', i = protocol.length
-		if(url.substring(0, i)==protocol){
-			urlList.unshift({href: url.substr(i+1), name: protocol})
-		}else
-			urlList.unshift({href: protocol+url, name: protocol})
+
 		//****** chrome, file, resource
 		try{
 			var uri = makeURI(url), file;
@@ -593,11 +587,11 @@
 
 			if(uri.schemeIs('file')){
 				file=uri.QueryInterface(Ci.nsIFileURL).file
-				urlList.unshift({href: file.path, name:'filePath', setValue: true})
+				urlList.unshift({href: file.path, name:'filePath', action: 'setValue'})
 				if(file.leafName.match(/\.(jar|zip|docx|xlsx|xpi|crx|oex)$/))
 					urlList.unshift({href: 'jar:'+uri.spec+'!/', name:'jar:'})
 			}else if(uri.schemeIs('jar')&&decode(uri.spec)!=decode(url)){
-				urlList.unshift({href: decode(uri.spec), name:'jarPath', setValue: true})
+				urlList.unshift({href: decode(uri.spec), name:'jarPath', action: 'setValue'})
 			}
 		}catch(e){}
 
@@ -613,7 +607,7 @@
 			var toc = urlList[i]
 			im.unshift(
 				'<stlink href="', toc.href.replace(/[<&"]/g, function(str) {return str == "&" ? "&amp;" : str =="<"? "&lt;":"&quote;"}), '"',
-						toc.setValue?" setValue='true'":'',
+						toc.action?" action='"+ toc.action+"'":'',
 						odd = !odd? " odd='true'":'', '>',
 					toc.name,
 				'</stlink>'
@@ -631,7 +625,7 @@
 			//el.setAttribute("type", "autocomplete-richlistbox")
 			//el.setAttribute("ignorekeys", "true")
 			this.container.parentNode.appendChild(el)
-			el.setAttribute('onclick','gURLBar.selectionManager.openUri(event)')
+			el.setAttribute('onclick','gURLBar.selectionManager.onProtocolPopupClick(event)')
 			el.setAttribute('onkeypress','dump(event)')
 
 
@@ -646,22 +640,37 @@
 
 		el.appendChild(fc);
 
-		/*var popupBoxObject = el.popupBoxObject;
+		var popupBoxObject = el.popupBoxObject;
 		popupBoxObject.setConsumeRollupEvent(popupBoxObject.ROLLUP_NO_CONSUME);
-		el.showPopup(anchorElement, -1, -1, "popup", "bottomleft", "topleft");*/
-		el.openPopup(this.container, "after_start", -50,0)
+		/*el.showPopup(anchorElement, -1, -1, "popup", "bottomleft", "topleft");*/
+		var r = anchorElement.getBoundingClientRect()
+		el.openPopup(null, "after_start", r.left-50,r.bottom)
 		el.focus()
 	},
-	/*onProtocolPopupClick:function(){
-
-	},*/
-
-	hrefFromElement: function (el) {
+	onProtocolPopupClick:function(e){
+		var el = e.originalTarget
 		var url = el.getAttribute('href')
-		if(el.getAttribute('setValue')) {
+		var action = el.getAttribute('action')
+		
+		if(action=='setValue') {
 			gURLBar.value = url;
 			return
 		}
+
+		if(action=='toggle') {
+			var protocol = url, i = protocol.length
+			url = gURLBar.value
+			if(url.substring(0, i)==protocol){
+				url = url.substr(i)
+			}else
+				url = protocol+url			 
+		}	
+		
+		this.openUri(e, url)
+	},
+
+	hrefFromElement: function (el) {
+		var url = el.getAttribute('href')		
 		if(url)return url
 
 		var i = el.getAttribute('index')
@@ -704,8 +713,8 @@
 		this.moveSelectionToInputField(st, en);
 	},
 
-	openUri: function(event){
-		var href=this.hrefFromElement(event.originalTarget)
+	openUri: function(event, href){
+		href=href||this.hrefFromElement(event.originalTarget)
 		if(!href)
 			return
 		var where = whereToOpenLink(event, false, true);
@@ -838,7 +847,7 @@
 			t: visibleRect.top,
 			l: visibleRect.left,
 			r: visibleRect.right,
-			b: cursorRect.b-2,
+			b: cursorRect.b,
 			w: visibleRect.width,
 			scrollW: this.container.scrollWidth,
 			scrollL: this.container.scrollLeft

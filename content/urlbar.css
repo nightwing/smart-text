@@ -1,4 +1,4 @@
-/**=={"lineHeight":15,"padding":2,"barHeight":19,"fontSize":13,"docrule":"@-moz-document url(\"chrome://browser/content/browser.xul\")","hideIdentityLabel":false,"progressmeter":true,"boldDomain":false,"hideHTTP":false}==**/
+/**=={"lineHeight":15,"padding":2,"barHeight":19,"fontSize":13,"docrule":"@-moz-document url(\"chrome://browser/content/browser.xul\")","progressmeter":true,"boldDomain":false}==**/
 
 /**==technical stuff==**/
 #urlbar {
@@ -140,34 +140,34 @@ stsegment.basedomain{
 }
 /**==?bubble==**/
 stsegment.basedomain{
-	/*background-color: #80BB4D;
+	/*#80BB4D;
 	background-color: #6B8BC6;
 	color: white;*/
 	text-shadow: 0pt 1px 0pt rgba(0, 0, 0, 0.25);
 	box-shadow: 0pt 0pt 0pt 1px rgba(0, 0, 0, 0.2) inset;
 	background-image: -moz-linear-gradient(rgba(255, 255, 255, 0.25), rgba(0, 0, 0, 0.15));
-	border-radius: 2px;  /**==?bubble=padded==**/
-	padding-left:1px;padding-right:1px
+	border-radius: 2px; 
+/**==?bubble=2==**/
+	padding-left:2px;padding-right:2px
 }
 stsegment.basedomain.first{
 	padding-left:0px!important
 } 
 stsegment.basedomain.last{
-	padding-right:0px!important /**==?bubble==**/
+	padding-right:0px!important 
+/**==?bubble==**/
 }
-/**==?arrow=1==**/
+/**==?arrow=4==**/
 stsegment.basedomain:not(.last)+stsegment::before{
 	width: 10px;
 	content:'\25B6';
 	color:rgba(100,200,100,1);
 	text-shadow: 1px 1px 2px  yellow;
-	/*
-	background-image: -moz-image-rect(url('chrome://smarttext/content/ce/breadcrumb.png'), 0%, 100%,100%,60%); 
-	background-position:left 50%;
-	background-repeat:no-repeat;*/
 }
-/**==?arrow==**/
-stsegment.basedomain:not(.last)+stsegment::before{
+/**==?arrow=1==**/stsegment.basedomain:not(.last)+stsegment::before
+/**==?arrow=2==**/stsegment.basedomain:not(.last)::after
+/**==?arrow=3==**/stsegment.path:not(.first)::before
+/**==?arrow==**/{
 	content:'  ';
 	background-image: -moz-image-rect(url('chrome://smarttext/content/ce/breadcrumb.png'), 0%, 90%,100%,68%); 
 	background-position:left 50%;
