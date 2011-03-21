@@ -531,8 +531,7 @@
 
 	getProtocolSuggestionHTML:function(){
 		var getAboutUrls=function(){
-			var l="@mozilla.org/network/protocol/about;1?what=", it;
-			var ans=[];
+			var l="@mozilla.org/network/protocol/about;1?what=", ans=[];
 			for(var i in Cc)
 				if(i.indexOf(l)==0){
 					ans.push('about:'+ i.substr(l.length))
