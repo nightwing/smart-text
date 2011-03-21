@@ -377,9 +377,11 @@ var toggleLiveXBLEditing=function(button){
 var xblLiveEdit = (function(){
 	var ios = Cc["@mozilla.org/network/io-service;1"].getService(Ci.nsIIOService)
 	var sss = Cc["@mozilla.org/content/style-sheet-service;1"].getService(Ci.nsIStyleSheetService)
-	var rootPath = 'chrome://smarttext/content/'	
+	var rootPath = 'chrome://smarttext/content/'
+	var bindingPath = rootPath+'urlbar.xml'
+	var bindingIndex = '#urlbar'
 	var activeURI = cssFileURI
-	
+	var rr=Math.random()
 	function updateStyle(register, useDataURI){		
 		var a=sss.AGENT_SHEET
 		
@@ -391,12 +393,16 @@ var xblLiveEdit = (function(){
 		}
 	}
 	function getData(useDataURI){
-		var binding = makeReq(rootPath+'urlbar.xml')
 		prepareCss()
 		var css = compileCss(options)
 		
+		/* 
+		var binding = makeReq(bindingPath)
 		var binding = "data:text/xml" + ";base64," + btoa(binding);
-		var text = css.replace( 'chrome://smarttext/content/urlbar.xml#urlbar', binding )
+		var text = css.replace( bindingPath+bindingIndex, binding )*/
+		
+		var text = css.replace( bindingPath+bindingIndex, bindingPath+'?version='+(rr++)+bindingIndex )
+		
 		if(!useDataURI)
 			return text
 		else 
@@ -447,6 +453,9 @@ addActivatorToWindow = function(window){
 	}]
 	window.activator.initialize()
 }*/
+
+//document.documentElement.setAttribute("disablechrome", "true");
+//       document.documentElement.removeAttribute("disablechrome");
 ]]></script>
 
 
