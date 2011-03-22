@@ -1,9 +1,20 @@
 /**=={"lineHeight":15,"padding":2,"barHeight":19,"fontSize":13,"docrule":"@-moz-document url(\"chrome://browser/content/browser.xul\")","progressmeter":true,"boldDomain":false}==**/
 
-/**==technical stuff==**/
+/**==?s4e=null==**/
 #urlbar {
 	-moz-binding: url("chrome://smarttext/content/urlbar.xml#urlbar") !important;
 }
+/**==?s4e==**/
+#urlbar {
+	-moz-binding: url("chrome://smarttext/content/s4e.xml#urlbar") !important;
+}
+hbox.urlbar-over-link-box{
+	background-color: white!important;
+}
+.urlbar-stack1:hover > .urlbar-over-link-layer {
+	display:none
+}
+/**==technical stuff==**/
 /* .smart-text>scrollbar {display:none!important} */
 stsegment{
 	white-space: pre;

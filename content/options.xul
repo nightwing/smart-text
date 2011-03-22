@@ -15,6 +15,7 @@
 	<button onclick="reloadWin()" label="reload"/>
 	<shadiaglue style='display:none;-moz-binding: url("chrome://shadia/content/bindings/debug.xml#shadiaGlue");'/> 
 	<spacer flex='1'/>
+	<button oncommand="aWin.focus();window.focus()" label='focus'/>
 	<button onclick="gModified=false;optionsToUi(initialOptions);applyStyleSheet()" label='reset'/>
 </hbox>
 <vbox oncommand="applyStyleSheet()" id='applyStyleSheet'>
@@ -53,7 +54,7 @@
 
 <script type="application/x-javascript"><![CDATA[
 reloadWin=function(){
-	if(window.opener&&window.opener.document){
+	if(true||window.opener&&window.opener.document){
 		//window.opener.openDialog(window.location.href,'','top='+screenY+',left='+screenX);
 		Services.ww.openWindow(null, window.location.href, "_blank", 
 			"chrome,extrachrome,resizable," + /*"centerscreen"+*/'top=' + screenY + ',left=' + screenX,
@@ -193,7 +194,6 @@ $=function(id){
 }
 function appendXML(element, xml){
 	var range = document.createRange()
-	dump(range,element, xml)
 	range.selectNode(element)
 	range.collapse(true)
 	var fragment = range.createContextualFragment(xml)
@@ -221,7 +221,9 @@ addCheckboxes=function(config){
 	var optionGridXML = [], checkboxListXML=[]
 	
 	gConfig.forEach(function(x){
-		if(x.type=='number')
+		if(x.builder)
+			optionGridXML.push(x.builder())
+		else if(x.type=='number')
 			return
 		else if(x.type=='checkbox')		
 			optionGridXML.push(formatString(xmlFrag, x))
@@ -237,17 +239,26 @@ addCheckboxes=function(config){
 			optionGridXML.push(formatString(xmlFrag2, x))
 		}
 	})
-	dump(checkboxListXML)
 	appendXML($('optionGrid'), optionGridXML.join(''))
 	appendXML($('applyStyleSheet'), checkboxListXML.join(''))
 }
-
+function toolbarbuttonList(){
+	var xmlFrag = <row align="center">
+			<label>status4evar integration</label>
+			<hbox flex='1'>
+				<toolbarbutton id="progressmeter" label='progressmeter' type='checkbox'/>
+				<toolbarbutton id="s4e" label='urlbarStatus' type='checkbox' oncommand='resetValueAfterBind()'/>
+			</hbox>
+		</row>.toXMLString()
+	return xmlFrag
+}
 
 /**/
 gConfig = [
 	{id:'fontSize', descr: '', type: 'number'},
 	{id:'barHeight', descr: '', type: 'number'},//TODO
-	{id:'progressmeter', descr: 'status4evar\'s progressmeter', type: 'checkbox'},
+	{id:'progressmeter', descr: "progressmeter", type: 'checkbox', builder:function(){}},
+	{id:'s4e', descr: 'urlbarStatus', type: 'checkbox', builder: toolbarbuttonList},
 	{id:'arrow', descr: 'arrow after domain', len:5, type: 'radiogroup'},
 	{id:'boldDomain', descr: 'bold domain', type: 'checkbox'},
 	{id:'bubble', descr: 'bubble around domain', len:3, type: 'radiogroup'},
@@ -390,7 +401,6 @@ var xblLiveEdit = (function(){
 	var sss = Cc["@mozilla.org/content/style-sheet-service;1"].getService(Ci.nsIStyleSheetService)
 	var rootPath = 'chrome://smarttext/content/'
 	var bindingPath = rootPath+'urlbar.xml'
-	var bindingIndex = '#urlbar'
 	var activeURI = cssFileURI
 	var rr=Math.random()
 	function updateStyle(register, useDataURI){		
@@ -405,14 +415,16 @@ var xblLiveEdit = (function(){
 	}
 	function getData(useDataURI){
 		prepareCss()
-		var css = compileCss(options)
-		
-		/* 
-		var binding = makeReq(bindingPath)
+		var css = compileCss(options)		
+		 
+		/*var binding = makeReq(bindingPath)
 		var binding = "data:text/xml" + ";base64," + btoa(binding);
 		var text = css.replace( bindingPath+bindingIndex, binding )*/
 		
-		var text = css.replace( bindingPath+bindingIndex, bindingPath+'?version='+(rr++)+bindingIndex )
+		var text = css.replace( 
+			/chrome:\/\/smarttext\/content\/[^#]*/,
+			function(a) a+'?version='+(rr++) 
+		)
 		
 		if(!useDataURI)
 			return text
@@ -430,9 +442,7 @@ var xblLiveEdit = (function(){
 		update: function(unregister){
 			updateStyle(unregister==undefined||unregister, true)
 			this.active = true
-			setTimeout(function(){ with(aWin){
-				gURLBar.value=gBrowser.userTypedValue||gBrowser.mCurrentBrowser.lastURI.spec				
-			}}, 50)
+			resetValueAfterBind()
 		},
 		finish: function(){
 			updateStyle(true, false)
@@ -445,6 +455,14 @@ var xblLiveEdit = (function(){
 		removeAndAdd: function()removeAndAdd(aWin.gURLBar)
 	}
 })()
+var afterBindTimer
+function resetValueAfterBind(){
+	clearTimeout(afterBindTimer)
+	afterBindTimer = setTimeout(function(){ with(aWin){
+		gURLBar.value=gBrowser.userTypedValue||gBrowser.mCurrentBrowser.lastURI.spec				
+	}}, 50)
+}
+
 /*
 addActivatorToWindow = function(window){	
 	window.activator=window.activator||{

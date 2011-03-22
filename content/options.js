@@ -111,14 +111,15 @@ function compileCss(options){
 
 		if(!i.name)
 			valid = true
-		else if(!i.conditionValue)
+		else if(!i.conditionValue)// ?p
 			valid = options[i.name]
-		else if(x = options[i.name]){
+		else if(x = options[i.name]){ //?p?a
 			if(x.indexOf)
 				valid = x.indexOf(i.conditionValue)>-1
 			else
 				valid = x == i.conditionValue
-		}
+		}else if(i.conditionValue=='null')//?p=null
+			valid = true
 				
 		if(valid){
 			if(i.eatBack){
