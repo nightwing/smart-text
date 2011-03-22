@@ -55,9 +55,9 @@
 reloadWin=function(){
 	if(window.opener&&window.opener.document){
 		//window.opener.openDialog(window.location.href,'','top='+screenY+',left='+screenX);
-		window.opener.open(window.location.href, "_blank", 
-			"chrome,extrachrome,resizable," + /*"centerscreen"+*/
-			'top=' + screenY + ',left=' + screenX).focus();
+		Services.ww.openWindow(null, window.location.href, "_blank", 
+			"chrome,extrachrome,resizable," + /*"centerscreen"+*/'top=' + screenY + ',left=' + screenX,
+			null).focus();
 		window.close()
 		return;
 	}
@@ -65,6 +65,7 @@ reloadWin=function(){
 }
 ]]></script>
 <script type="application/x-javascript"><![CDATA[	
+/**********************************************************************/
 /**********************************************************************/
 function getParserStyleSheet(){
 	var pss=document.getElementById('shadia-ParserStyleSheet')
@@ -162,6 +163,7 @@ findStyleSheetByCss = function(element,descriptiveCss){
 	}
 }
 /**********************************************************************/
+/**********************************************************************/
 
 Components.utils.import("resource://gre/modules/Services.jsm");
 
@@ -170,11 +172,9 @@ var styleURI="chrome://smarttext/content/urlbar.css";
 window.__defineGetter__('aWin', function(){	
 	return Services.wm.getMostRecentWindow('navigator:browser')
 })
-/**smart text specific*/
-function Init() {
-	
-	if(aWin) {			
-		
+
+function Init() {	
+	if(aWin) {
 	}else{
 		var bu=document.createElement("button")
 		bu.setAttribute("onclick","this.parentNode.removeChild(this);Init()")
@@ -182,9 +182,10 @@ function Init() {
 		document.documentElement.appendChild(bu)
 		return;
 	}
-
+	
 	addCheckboxes(gConfig)
 	optionsToUi(options)
+	fixURLBarDisplay(true)	
 }
 /** dom helpers*/
 $=function(id){
@@ -350,10 +351,20 @@ saveChanges=function(){
 		xblLiveEdit.finish()
 	else if(gModified)
 		save()
+	
+	fixURLBarDisplay(false)
 }
 
-/***/
-
+/**urlbar is hidden for about:addons**/
+fixURLBarDisplay = function(init){
+	var br
+	if(window.opener && (br = aWin)){
+		if(init)
+			br.document.documentElement.removeAttribute("disablechrome");
+		else if(br.XULBrowserWindow.hideChromeForLocation(br.content.location.href))
+			br.document.documentElement.setAttribute("disablechrome", "true");		
+	}
+}
 ]]></script>
 
 <script src='options.js'/>
