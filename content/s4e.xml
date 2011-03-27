@@ -8,7 +8,7 @@
 	<binding id="urlbar" extends="chrome://smarttext/content/urlbar.xml#urlbar">
 
 		<content sizetopopup="pref" >
-			<xul:hbox class="autocomplete-textbox-container" flex="1">
+			<xul:hbox class="autocomplete-textbox-container urlbar-textbox-container" flex="1">
 				<children includes="image|deck|stack|box">
 					<xul:image class="autocomplete-icon" allowevents="true"/>
 				</children>
@@ -80,10 +80,13 @@
 		<implementation>
 			<constructor><![CDATA[
 				this._overLinkBox.addEventListener("transitionend", this, false);
+				this._overLinkBox.style.backgroundColor = getComputedStyle(this).backgroundColor;
+				this.setOverLink = this.setStatus
 			]]></constructor>
 
 			<destructor><![CDATA[
 				this._overLinkBox.removeEventListener("transitionend", this, false);
+				this._clearOverLinkInterval();
 			]]></destructor>
 
 			<field name="_overLinkLayer" readonly="true"><![CDATA[
@@ -171,11 +174,11 @@
 			</method>
 
 			<method name="setStatusType">
-				<parameter name="aURL"/>
+				<parameter name="aValue"/>
 				<body><![CDATA[
 					var overLinkBox = this._overLinkBox;
 					overLinkBox.setAttribute("previoustype", overLinkBox.getAttribute("type"));
-					overLinkBox.setAttribute("type", text.type);
+					overLinkBox.setAttribute("type", aValue);
 				]]></body>
 			</method>
 

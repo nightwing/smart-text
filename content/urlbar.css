@@ -8,11 +8,11 @@
 #urlbar {
 	-moz-binding: url("chrome://smarttext/content/s4e.xml#urlbar") !important;
 }
-hbox.urlbar-over-link-box{
-	background-color: white!important;
-}
 .urlbar-stack1:hover > .urlbar-over-link-layer {
 	display:none
+}
+.urlbar-over-link-box{
+	min-height: 0px!important;
 }
 /**==technical stuff==**/
 /* .smart-text>scrollbar {display:none!important} */

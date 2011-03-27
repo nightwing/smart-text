@@ -14,12 +14,12 @@
           xmlns:xbl="http://www.mozilla.org/xbl">
 	<binding id="urlbar" extends="chrome://browser/content/urlbarBindings.xml#urlbar" inheritstyle ="true">
 		<content sizetopopup="pref" >
-			<xul:hbox class="autocomplete-textbox-container" flex="1">
+			<xul:hbox class="autocomplete-textbox-container urlbar-textbox-container" flex="1">
 				<children includes="image|deck|stack|box">
 					<xul:image class="autocomplete-icon" allowevents="true"/>
 				</children>
 
-<xul:stack flex="1" anonid="stack" class="urlbar-stack1">
+<xul:stack flex="1" anonid="stack" class="urlbar-stack1" context=''>
     <children includes="progressmeter"/>
 
 <xul:hbox flex="1" >
