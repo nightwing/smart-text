@@ -329,7 +329,15 @@
 		if (host) {
 			try {
 				let baseDomain = Services.eTLD.getBaseDomainFromHost(host);
-				is+=host.lastIndexOf(baseDomain)
+				let l=host.lastIndexOf(baseDomain)//punicode hosts
+				if(l==-1){
+					let i = baseDomain.split('.').length
+					l=host.length
+					while(i--)
+						l=host.lastIndexOf('.',l-1)
+					l++
+				}
+				is+=l
 			} catch (e) {}
 		}
 	//look for domain
