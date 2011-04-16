@@ -233,17 +233,17 @@
 	getMarkedTokenList: function(st, en){
 		function sub(pt, sel, a, b){
 			var fr = pt.text.substring(a,b)
-			var class = pt.class + ' marked'
+			var clazz = pt.class + ' marked'
 
 			if(!fr) return
-			if(sel) class += ' selected'
-			if(a) class += ' first'
-			if(b < pt.text.length) class += ' last'
+			if(sel) clazz += ' selected'
+			if(a) clazz += ' first'
+			if(b < pt.text.length) clazz += ' last'
 
 			newList.push({
 				text: fr,
 				index: pt.index,
-				class: class
+				class: clazz
 			})
 		}
 		var newList = [], i=0, pt = this.tokenList[i], lastPos=0, st1, en1
