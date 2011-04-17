@@ -18,25 +18,95 @@
 	<button oncommand="aWin.focus();window.focus()" label='focus'/>
 	<button onclick="gModified=false;optionsToUi(initialOptions);applyStyleSheet()" label='reset'/>
 </hbox>
-<vbox oncommand="applyStyleSheet()" id='applyStyleSheet'>
-	<grid tooltiptext="configure appearence of urlbar">
-		<columns>
-			<column flex="1"/>
-			<column flex="0"/>
-			<column flex="0"/>
-		</columns>
-		<rows flex="1" id="optionGrid">
-			<row align="center">
-				<label>font size</label>
-				<textbox id="fontSize" type="number" value="12" onkeyup1='applyStyleSheet()'/><label>px</label>
-			</row>
-			<row align="center">
-				<label>urlbar height</label>
-				<textbox id="barHeight" type="number" value="24" /><label>px</label>
-			</row>		
-		</rows>
-	</grid>
-</vbox>	
+
+
+<vbox oncommand="applyStyleSheet()" id="applyStyleSheet">
+  <grid>
+    <columns>
+      <column flex="1"/>
+      <column flex="0"/>
+      <column flex="0"/>
+    </columns>
+    <rows flex="1" id="optionGrid">
+      <row align="center">
+        <label>font size</label>
+        <textbox id="fontSize" type="number" value="12" onkeyup1="applyStyleSheet()"/>
+        <label>px</label>
+      </row>
+      <row align="center">
+        <label>urlbar height</label>
+        <textbox id="barHeight" type="number" value="24"/>
+        <label>px</label>
+      </row>
+      <row align="center">
+        <label>status4evar integration</label>
+        <hbox flex="1">
+          <toolbarbutton id="progressmeter" label="progressmeter" type="checkbox" checkState="1" checked="true"/>
+          <toolbarbutton id="s4e" label="urlbarStatus" type="checkbox" oncommand="resetValueAfterBind()" checkState="0"/>
+        </hbox>
+      </row>
+      <row align="center">
+        <label>arrow after domain</label>
+        <radiogroup orient="horizontal" id="arrow" value="">
+          <radio tooltiptext='none'/>
+          <radio tooltiptext='outside of bubble'/>
+          <radio tooltiptext='inside bubble'/>
+          <radio tooltiptext='after each segment'/>
+          <radio/>
+        </radiogroup>
+      </row>
+      <row align="center">
+        <label>bold domain</label>
+        <checkbox id="boldDomain"/>
+        <label/>
+      </row>
+      <row align="center">
+        <label>bubble around domain</label>
+        <radiogroup orient="horizontal" id="bubble" value="">
+          <radio tooltiptext='none'/>
+          <radio tooltiptext='not padded'/>
+          <radio tooltiptext='padded'/>
+        </radiogroup>
+      </row>
+    </rows>
+  </grid>
+  <groupbox>
+    <caption label="hide"/>
+    <div style="width:100%;position:relative;display:block">
+      <checkbox id="HTTP" label="http://" style="display:inline"/>
+      <checkbox id="go" label="go button" style="display:inline"/>
+      <checkbox id="identityLabel" label="identity label" style="display:inline" checked="true"/>
+      <checkbox id="ellipsis" label="ellipsis" style="display:inline"/>
+    </div>
+  </groupbox>
+  <groupbox>
+    <caption label="hide"/>
+    <div style="width:100%;position:relative;display:block">
+      <checkbox id="HTTP" label="http://" style="display:inline"/>
+      <checkbox id="go" label="go button" style="display:inline"/>
+      <checkbox id="identityLabel" label="identity label" style="display:inline" checked="true"/>
+      <checkbox id="ellipsis" label="ellipsis" style="display:inline"/>
+    </div>
+  </groupbox>
+  <!-- ***** - - >
+  <menulist editable="true" preference="pref_one">
+    <menupopup id="window-menu" >
+      <menuitem label="http://www.google.com/search?q="/>
+      <menuitem label="http://www.google.com/search?q="/>
+    </menupopup>
+  </menulist>
+  <preferences>
+    <preference id="pref_one" name="keyword.URL" type="string"/>
+  </preferences>
+  < !- - ***** -->
+</vbox>
+
+
+
+
+
+
+
 <hbox id="bottombox">
 	<menupopup id='context'>
 		<menuitem label='focus' oncommand="xblLiveEdit.update();aWin.focus()"/>
@@ -184,7 +254,7 @@ function Init() {
 		return;
 	}
 	
-	addCheckboxes(gConfig)
+	//addCheckboxes(gConfig)
 	optionsToUi(options)
 	fixURLBarDisplay(true)	
 }
