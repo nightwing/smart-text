@@ -8,18 +8,31 @@
 		onunload='saveChanges()'
 		centerscreen='true'
 		>
-		 <h:head><h:link rel="icon" href="chrome://smarttext/content/icon.png"/></h:head>
-
-<prefpane flex="1">
-<hbox>
-	<button onclick="reloadWin()" label="reload"/>
-	<shadiaglue style='display:none;-moz-binding: url("chrome://shadia/content/bindings/debug.xml#shadiaGlue");'/> 
+<h:head><h:link rel="icon" href="chrome://smarttext/content/icon.png"/></h:head>
+<h:style>
+.tabs-left, .tabs-right{display:none}
+devbox{border-top:groove gray 4px}
+colorButton{width:20px;height:25px;border:groove gray 2px}
+menulist{-moz-appearance:textfield}
+.toolbarbutton{-moz-appearance:toolbarbutton;padding:0px 2px}
+</h:style>
+<tabbox flex='1'>
+  <tabs>
+	<tab label='appearance'/>
+	<tab label='user style'/>
 	<spacer flex='1'/>
-	<button oncommand="aWin.focus();window.focus()" label='focus'/>
-	<button onclick="gModified=false;optionsToUi(initialOptions);applyStyleSheet()" label='reset'/>
-</hbox>
-
-
+	<toolbarbutton label='&#8251;' tooltiptext='show urlbar'
+					oncommand="aWin.focus();window.focus()" />
+	<toolbarbutton action='def' label='reset'  type='menu-button' oncommand="doResetOptions(event.target.getAttribute('action'))">
+	  <menupopup>
+		<menuitem action='init' label='reset to initial'/>
+		<menuitem action='last' label='reset to last modified'/>
+		<menuitem action='fact' label='reset to factory settings'/>
+	  </menupopup>
+	</toolbarbutton >
+  </tabs>
+  <tabpanels>
+	<tabpanel orient='vertical'>
 <vbox oncommand="applyStyleSheet()" id="applyStyleSheet">
   <grid>
     <columns>
@@ -38,11 +51,13 @@
         <textbox id="barHeight" type="number" value="24"/>
         <label>px</label>
       </row>
+	  <separator class="groove"/>
+
       <row align="center">
         <label>status4evar integration</label>
         <hbox flex="1">
-          <toolbarbutton id="progressmeter" label="progressmeter" type="checkbox" checkState="1" checked="true"/>
-          <toolbarbutton id="s4e" label="urlbarStatus" type="checkbox" oncommand="resetValueAfterBind()" checkState="0"/>
+          <toolbarbutton id="progressmeter" label="progressmeter" type="checkbox"/>
+          <toolbarbutton id="s4e" label="urlbarStatus" type="checkbox" oncommand="resetValueAfterBind()"/>
         </hbox>
       </row>
       <row align="center">
@@ -56,11 +71,6 @@
         </radiogroup>
       </row>
       <row align="center">
-        <label>bold domain</label>
-        <checkbox id="boldDomain"/>
-        <label/>
-      </row>
-      <row align="center">
         <label>bubble around domain</label>
         <radiogroup orient="horizontal" id="bubble" value="">
           <radio tooltiptext='none'/>
@@ -68,25 +78,45 @@
           <radio tooltiptext='padded'/>
         </radiogroup>
       </row>
-    </rows>
+	  <separator class="groove"/>
+	  <hbox align="center">
+        <label>domain text</label>
+        <checkbox id="boldDomain" label='bold'/>
+        <hbox align="center">
+		  <!-- <textbox id="domainColor" type="color" oninput="applyStyleSheet()"/> -->
+		  <menulist id="domainColor" editable="true" type="color">
+			<menupopup id="window-menu" >
+			  <menuitem label="black"/>
+			  <menuitem label="graytext"/>
+			</menupopup>
+		  </menulist>
+		  <colorButton/>
+        </hbox>
+      </hbox>
+    </rows>	
   </grid>
+  
   <groupbox>
     <caption label="hide"/>
     <div style="width:100%;position:relative;display:block">
       <checkbox id="HTTP" label="http://" style="display:inline"/>
       <checkbox id="go" label="go button" style="display:inline"/>
-      <checkbox id="identityLabel" label="identity label" style="display:inline" checked="true"/>
+      <checkbox id="identityLabel" label="identity label" style="display:inline"/>
       <checkbox id="ellipsis" label="ellipsis" style="display:inline"/>
     </div>
   </groupbox>
   <groupbox>
-    <caption label="hide"/>
-    <div style="width:100%;position:relative;display:block">
-      <checkbox id="HTTP" label="http://" style="display:inline"/>
-      <checkbox id="go" label="go button" style="display:inline"/>
-      <checkbox id="identityLabel" label="identity label" style="display:inline" checked="true"/>
-      <checkbox id="ellipsis" label="ellipsis" style="display:inline"/>
-    </div>
+	<hbox align="center">
+	  <label value="main color"/>
+	  <!-- <textbox id="baseColor" type="color" oninput="applyStyleSheet()"/> -->
+	  <menulist id="baseColor" editable="true" type="color">
+		<menupopup id="window-menu" >
+		  <menuitem label="black"/>
+		  <menuitem label="graytext"/>
+		</menupopup>
+	  </menulist>
+      <colorButton/>
+    </hbox>
   </groupbox>
   <!-- ***** - - >
   <menulist editable="true" preference="pref_one">
@@ -98,29 +128,55 @@
   <preferences>
     <preference id="pref_one" name="keyword.URL" type="string"/>
   </preferences>
-  < !- - ***** -->
+  < ! - - ***** -->
 </vbox>
+	</tabpanel>
+	<tabpanel orient='vertical'>
+		<hbox>
+			<!-- <label value='add any css'/> -->
+			<label value="show css file" tooltiptext="show css file" class='toolbarbutton'
+					onclick="cssFileURI.QueryInterface(Ci.nsIFileURL).file.QueryInterface(Ci.nsILocalFile).reveal()"/>
+			<spacer flex='1'/>
+			<toolbarbutton label="apply" oncommand="this.disabled=true;scheduleUpdate(1)" id='updateButton' disabled='true'/>
+		</hbox>
+	    <textbox multiline='true' flex='1' id='additionalCss' onkeydown="
+			if(event.ctrlKey){
+				if(event.keyCode==KeyEvent.DOM_VK_RETURN){
+					(this.button||(this.button=$('updateButton'))).disabled=true;
+					scheduleUpdate(1)
+				}
+			}"
+			onkeypress="
+			if(event.charCode)if('!'==String.fromCharCode(event.charCode)){
+				insertText('!important',this);
+				event.preventDefault();event.stopPropagation();
+			}"
+			oninput="(this.button||(this.button=$('updateButton'))).disabled=false;gModified=true;options.additionalCss=this.value"/>
+	</tabpanel>
 
-
-
-
-
-
-
-<hbox id="bottombox">
+  </tabpanels>
+</tabbox>
+<hbox id="bottombox">	
+	<button label="liveEditXBL" oncommand="toggleLiveXBLEditing(this)" 
+					tooltiptext='reload urlbar.xml (:for developers:)' type='checkbox'/>
+	<toolbarbutton onclick="reloadWin()" label="&#10227;" tooltiptext="reopen this window"/>
+	<spacer flex="10"/>
+	<button label="done" oncommand="window.close()//saveChanges()//"/>
+</hbox>
+<devbox id='devbox' hidden='true'>
+	<toolbarbutton label="reload binding" oncommand="xblLiveEdit.update()" context='context'/>
 	<menupopup id='context'>
 		<menuitem label='focus' oncommand="xblLiveEdit.update();aWin.focus()"/>
 		<menuitem label='focus2' oncommand="xblLiveEdit.update();aWin.focus();window.focus()"/>
 		<menuitem label='removeAndAdd' oncommand="xblLiveEdit.removeAndAdd();aWin.focus();window.focus()"/>
 		<menuitem label='unregiter' oncommand="xblLiveEdit.update(false)"/>
 	</menupopup>
-	<button label="reload" oncommand="xblLiveEdit.update()" hidden='true' context='context'/>
-	<button label="liveEditXBL" oncommand="toggleLiveXBLEditing(this)" 
-	tooltiptext='reload urlbar.xml (:for developers:)' type='checkbox'/>
-	<spacer flex="10"/>
-	<button label="done" oncommand="window.close()//saveChanges()//"/>
-</hbox>
-</prefpane>
+	<toolbarbutton label='&#8251;' tooltiptext='show urlbar'
+					oncommand="aWin.focus();window.focus()" />
+	<separator class="groove"/>
+	<spacer flex='1' tooltiptext='&#9882;&#9883;&#9884;&#9885;'/>	
+	<shadiaglue buttons='jsMirror,errorConsole' style='-moz-binding: url("chrome://shadia/content/bindings/debug.xml#shadiaGlue");'/> 	
+</devbox>
 
 <script type="application/x-javascript"><![CDATA[
 reloadWin=function(){
@@ -133,6 +189,9 @@ reloadWin=function(){
 		return;
 	}
 	window.location.reload();	
+}
+function insertText(iText, elem){
+	elem.editor.QueryInterface(Ci.nsIPlaintextEditor).insertText(iText);
 }
 ]]></script>
 <script type="application/x-javascript"><![CDATA[	
@@ -338,6 +397,9 @@ gConfig = [
 		identityLabel: 'identity label',
 		ellipsis: 'ellipsis'
 	}, type: 'checkboxList'},
+	{id:'baseColor', descr: '', type: 'color'},
+	{id:'domainColor', descr: '', type: 'color'},
+//	{id:'additionalCss', descr: '', type: 'text'},
 ]
 optionsFromUi = function(options){
 	gConfig.forEach(function(x){
@@ -353,8 +415,15 @@ optionsFromUi = function(options){
 			options[x.id] = ans.length? ans: null
 		}else if(x.type=='radiogroup')
 			options[x.id] = $(x.id).selectedIndex
+		else 
+			options[x.id] = $(x.id).value
 	})
-	
+	updateComputableOptions(options)	
+}
+function updateOption(element){
+	//Todo
+}
+updateComputableOptions = function(options){
 	options.lineHeight = Math.ceil( options.fontSize*1.2 )	
 	if(options.barHeight < options.lineHeight)
 		options.barHeight = options.lineHeight
@@ -363,15 +432,14 @@ optionsFromUi = function(options){
 	if(options.padding-Math.floor(options.padding)>0){
 		options.lineHeight--;
 		options.padding=(options.barHeight-options.lineHeight)/2;
-	}
-	
+	}	
 }
 optionsToUi = function(options){
 	gConfig.forEach(function(x){
-		if(x.type=='number')
-			$(x.id).value = options[x.id]
+		if(x.type=='number'||x.type=='color'||x.type=='text')
+			$(x.id).value = options[x.id]||''
 		else if(x.type=='checkbox')		
-			$(x.id).checked = options[x.id]
+			$(x.id).checked = !!options[x.id]
 		else if(x.type=='checkboxList'){
 			var ans=options[x.id]||[]
 			for(var i in x.subs)
@@ -379,9 +447,30 @@ optionsToUi = function(options){
 		}else if(x.type=='radiogroup')
 			$(x.id).selectedIndex = options[x.id]||0
 	})
+	// handle additionalCss separetely
+	$('additionalCss').value = options.additionalCss||''
 }
 
-
+doResetOptions = function(type){
+	var newOpts
+	if(type=='def'){
+		lastModifiedOptions = extend(options)
+		gModified=false;
+		newOpts = initialOptions
+	}else if(type=='init'){
+		lastModifiedOptions = extend(options)
+		gModified=false;
+		newOpts = initialOptions		
+	}else if(type=='last'){
+		gModified=true;
+		newOpts = lastModifiedOptions
+	}else if(type=='fact'){
+		gModified=true;
+		newOpts = factoryOptions
+	}
+	optionsToUi(newOpts);
+	applyStyleSheet()
+}
 
 /** ---------------------------------------**\
  |                *  *  *                   |
@@ -448,23 +537,36 @@ fixURLBarDisplay = function(init){
 }
 ]]></script>
 
-<script src='options.js'/>
+<script type="application/x-javascript" src='options.js'/>
+<script type="application/x-javascript" src='wheel picker.js'/>
 
 <script type="application/x-javascript"><![CDATA[
+//activate shadiaglue
+document.getElementsByTagName('shadiaglue')[0]
+/*try{
+	if( gChromeReg.convertChromeURL(ios.newURI(window.location.href,null,null)).scheme=='file'){
+		let c=$('devbox')
+		c.firstChild.id='devbox'
+		c.firstChild.hidden=true
+		c.id='devbox2'
+		c.hidden=false
+	}
+}catch(e){}*/
 /**************************************\     //***************************************
  **       * *    * **  ** ** ** *       \   //       ** *** ***  *** ** ***        **
  * *     *   *  * **    ** ** ****       \ //       ** * ** **    **** * ***      * *
  *  * * * * * * * * * * * * * * * *       V/       * * * * * * * * * * * * * * * *  */
 var toggleLiveXBLEditing=function(button){	
 	if(xblLiveEdit.active){
-		button.previousSibling.hidden=true
+		$('devbox').hidden=true
 		xblLiveEdit.finish()		
 	}else{
-		button.previousSibling.hidden=false
+		$('devbox').hidden=false
 		xblLiveEdit.update()
 		//aWin.restore()
 		//focus()
 	}
+	window.sizeToContent()
 }
 var xblLiveEdit = (function(){
 	var ios = Cc["@mozilla.org/network/io-service;1"].getService(Ci.nsIIOService)

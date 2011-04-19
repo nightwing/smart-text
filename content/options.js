@@ -59,21 +59,30 @@ function createStyleFile(){
 }
 
 /******************************************************************/
-var OP_COM='/**==',CL_COM='==**/'
+var OP_COM='/**==',CL_COM='==**/',A_COM=OP_COM+'[]'+CL_COM
 function getUserOptions(){
 	try{
 		var css = makeReq(cssFileURI.spec)
 		var i = css.indexOf(CL_COM), j = css.indexOf(OP_COM)+OP_COM.length
-		css = css.substring(i,j)
-		return JSON.parse(css)
+		var json = JSON.parse(css.substring(i,j))
+		
+		i=css.indexOf(A_COM)
+		if(i>0){
+			json.additionalCss = css.substring(i+A_COM.length, css.lastIndexOf(A_COM))
+		}else
+			json.additionalCss = ''
+		return json
 	}catch(e){}
 }
 function extend(a,b){
-	b=b||{}
+	var newOb = {}
 	for(var i in a){
-		b[i] = a[i]
+		newOb[i] = a[i]
 	}
-	return b
+	for(var i in b){
+		newOb[i] = b[i]
+	}
+	return newOb
 }
 var css, cssFragmentMap, options, defaultOptions
 function prepareCss(){
@@ -84,7 +93,7 @@ function prepareCss(){
 	defaultOptions=JSON.parse(cssFragments[0][0])
 	cssFragments.shift()
 
-	options = options || getUserOptions() || extend(defaultOptions) || {}
+	options = options || extend(defaultOptions, getUserOptions()) || {}
 
 	cssFragmentMap=[]
 	for(var i in cssFragments){
@@ -133,12 +142,16 @@ function compileCss(options){
 			);
 		}
 	}
+	//mechanism to add any user style
+	if(options.additionalCss)
+		compiledCss.push('\n',A_COM, options.additionalCss,A_COM) 
 	compiledCss.push('}')
 	return compiledCss.join('')
 }
 
-function getOptionsFromUI(){
-	var cs = window.getComputedStyle(gURLBar)
+function recomputeLineHeightFromUI(options,aWin){
+	var win = aWin || window
+	var cs = win.getComputedStyle(win.gURLBar)
 	options.barHeight = parseInt(cs.height)
 	options.fontSize = parseInt(cs.fontSize)
 	options.lineHeight = Math.ceil( options.fontSize*1.2 )	
@@ -148,6 +161,7 @@ function getOptionsFromUI(){
 		options.padding=(options.barHeight-options.lineHeight)/2;
 	}
 	options.barHeight = Math.max(options.barHeight, options.lineHeight+2*options.padding)
+	return options
 }
 
 /******************************************************************/
@@ -156,7 +170,7 @@ if(window.location.href.indexOf(contentRoot)==-1){
 	//createStyleFile(cssFile)
 	var onLoad=function(){
 		window.removeEventListener('load',onLoad,false)
-		getOptionsFromUI(options)
+		recomputeLineHeightFromUI(options)
 		var text = compileCss(options)
 		writeToFile(cssFile, text)
 		//for status4evar
@@ -172,6 +186,8 @@ if(window.location.href.indexOf(contentRoot)==-1){
 	window.cssFragmentMap = cssFragmentMap
 	window.defaultOptions = defaultOptions
 	window.initialOptions = extend(options)
+	window.__defineGetter__('factoryOptions', function()recomputeLineHeightFromUI(extend(defaultOptions),aWin))
+	window.recomputeLineHeightFromUI = recomputeLineHeightFromUI
 	window.compileCss = compileCss
 	window.prepareCss = prepareCss
 	window.updateStyle = updateStyle
@@ -182,5 +198,6 @@ if(window.location.href.indexOf(contentRoot)==-1){
 	window.Cu = Cu
 	window.cssFileHref = cssFileURI.spec
 	window.cssFileURI = cssFileURI
+	window.extend = extend
 }
 })()

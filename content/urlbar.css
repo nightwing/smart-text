@@ -1,4 +1,4 @@
-/**=={"lineHeight":15,"padding":2,"barHeight":19,"fontSize":13,"docrule":"@-moz-document url(\"chrome://browser/content/browser.xul\")","progressmeter":true,"boldDomain":false}==**/
+/**=={"domainColor":"black","baseColor":"graytext","lineHeight":15,"padding":2,"barHeight":19,"fontSize":13,"docrule":"@-moz-document url(\"chrome://browser/content/browser.xul\")","progressmeter":true,"boldDomain":false}==**/
 
 /**==?s4e=null==**/
 #urlbar {
@@ -21,7 +21,7 @@ stsegment{
 	display:block;
 }
 .smart-text{
-	color:graytext;
+	color:$baseColor$;
 	padding-left:1px;
 	overflow:hidden;
 	display:-moz-box;
@@ -61,11 +61,11 @@ stsegment:not(.marked).empty:hover{
 	color:black;
 }
 stsegment.basedomain{
-	color:black;
+	color:$domainColor$;
 }
-stsegment.querry{
+/* stsegment.querry{
 	color:#717171;
-}
+} */
 .smart-text-ellipsis:hover{
 	text-shadow:-1px -1px 2px;
 	color:blue
