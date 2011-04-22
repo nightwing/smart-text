@@ -869,7 +869,10 @@
 
 		if(visibleRect.scrollW >= visibleRect.w)
 			var timerId = setInterval(onScrollInterval, 40);
-
+			
+		if(this.fixGURLBarPaddingClick)
+			this.state='left'
+			
 		this.state=='left'||onMouseMove(e)
 	},
 

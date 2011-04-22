@@ -14,10 +14,17 @@
 				</children>
 
 <xul:stack flex="1" anonid="stack" class="urlbar-stack1">
-    <children includes="progressmeter"/>
+	<xul:vbox class="urlbar-progress-layer" xbl:inherits="pack=pmpack" flex="1">
+		<children includes="progressmeter"/>
+	</xul:vbox>
+	<xul:scrollbox anonid="over-link-layer" class="urlbar-over-link-layer" xbl:inherits="overlinkstate" flex="1">
+		<xul:hbox anonid="over-origin-box" class="urlbar-over-origin-box" xbl:inherits="overlinkstate" align="center" flex="1">
+			<xul:label anonid="origin-label" class="urlbar-origin-label" flex="1" crop="end"/>
+		</xul:hbox>
 
-<xul:hbox flex="1" >
-<xul:hbox flex="1" class="st-layers">
+	</xul:scrollbox>
+<xul:hbox flex="1">	
+<xul:hbox flex="1" class="st-layers" xbl:inherits="focused,overlinkstate">
 	<xul:vbox flex="1" anonid="textbox-input-box" class="textbox-input-box plain " align="stretch">
 	   <xul:vbox anonid="textbox-input-box-inner" xbl:inherits="tooltiptext=inputtooltiptext"
 				 flex="1" >
@@ -34,6 +41,10 @@
 	<xul:box anonid="overflow-ellipsis" class="smart-text-ellipsis" onclick="gURLBar.inputclicks.elipsisClick(event);"
 				style="-moz-user-select:none;-moz-box-align:center" ><html:div>...</html:div></xul:box>
 
+		<xul:hbox anonid="over-link-box" class="urlbar-over-link-box" xbl:inherits="overlinkstate" align="center">
+			<xul:label anonid="over-link-host-label" class="urlbar-over-link-host-label"/>
+			<xul:label anonid="over-link-path-label" class="urlbar-over-link-path-label" flex="1"/>
+		</xul:hbox>
 </xul:hbox>
 </xul:hbox>
 
@@ -45,16 +56,7 @@
 	<xul:hbox style='pointer-events:auto;min-width:80px'/>
 </xul:hbox>
 
-<xul:scrollbox style='pointer-events:none' anonid="over-link-layer" class="urlbar-over-link-layer" 
-	xbl:inherits="overlinkstate" flex="1">
-	<xul:hbox anonid="over-origin-box" class="urlbar-over-origin-box" xbl:inherits="overlinkstate" align="center" flex="1">
-		<xul:label anonid="origin-label" class="urlbar-origin-label" flex="1" crop="end"/>
-	</xul:hbox>
-	<xul:hbox anonid="over-link-box" class="urlbar-over-link-box" xbl:inherits="overlinkstate" align="center">
-		<xul:label anonid="over-link-host-label" class="urlbar-over-link-host-label"/>
-		<xul:label anonid="over-link-path-label" class="urlbar-over-link-path-label" flex="1"/>
-	</xul:hbox>
-</xul:scrollbox>
+
 
 </xul:stack>
 
@@ -80,13 +82,10 @@
 		<implementation>
 			<constructor><![CDATA[
 				this._overLinkBox.addEventListener("transitionend", this, false);
-				this._overLinkBox.style.backgroundColor = getComputedStyle(this).backgroundColor;
-				this.setOverLink = this.setStatus
 			]]></constructor>
 
 			<destructor><![CDATA[
 				this._overLinkBox.removeEventListener("transitionend", this, false);
-				this._clearOverLinkInterval();
 			]]></destructor>
 
 			<field name="_overLinkLayer" readonly="true"><![CDATA[
@@ -113,19 +112,11 @@
 				document.getAnonymousElementByAttribute(this, "anonid", "over-link-path-label");
 			]]></field>
 
-			<field name="_overLinkIntervalDelay" readonly="true"><![CDATA[
-				100
-			]]></field>
-
 			<field name="_overLinkHostValue"><![CDATA[
 				null
 			]]></field>
 
 			<field name="_overLinkPathValue"><![CDATA[
-				null
-			]]></field>
-
-			<field name="_overLinkInterval"><![CDATA[
 				null
 			]]></field>
 
@@ -195,60 +186,25 @@
 					if((!aURL && (XULBrowserWindow.hideOverLinkImmediately
 					   || this._hideOverLinkImmediately)) || this.focused)
 					{
-						this._clearOverLinkInterval();
 						this._setOverLinkState(null);
 						return;
 					}
 
-					// Update and show it immediately if it's in transition.
-					if(aURL && this._overLinkTransitioning)
+					if(aURL)
 					{
-						this._clearOverLinkInterval();
 						this._updateOverLink(aURL);
-						this._setOverLinkState("showing");
-						return;
-					}
-
-					this._overLinkURL = aURL;
-					this._seenNewOverLink = true;
-
-					// If the user is continually mousing over links, make this method
-					// basically a no-op.
-					if(this._overLinkInterval)
-					{
-						return;
-					}
-
-					// Otherwise, the user has just moused over or focused a single link.
-					// Start the interval and signal that we should potentially show the
-					// over-link the first time it fires by unsetting _seenNewOverLink.
-					this._seenNewOverLink = false;
-					this._overLinkInterval = setInterval(this._overLinkIntervalCallback,
-									 this._overLinkIntervalDelay, this);
-				]]></body>
-			</method>
-
-			<method name="_overLinkIntervalCallback">
-				<parameter name="self"/>
-				<body><![CDATA[
-					// If the user is still mousing over links, bail out early.
-					if(self._seenNewOverLink)
-					{
-						self._seenNewOverLink = false;
-						return;
-					}
-
-					// Otherwise, the user has stopped over a link.  Clear the interval
-					// and update the over-link.
-					self._clearOverLinkInterval();
-					if(self._overLinkURL)
-					{
-						self._updateOverLink(self._overLinkURL);
-						self._setOverLinkState("fade-in");
+						if(this._overLinkTransitioning)
+						{
+							this._setOverLinkState("showing");
+						}
+						else
+						{
+							this._setOverLinkState("fade-in");
+						}
 					}
 					else
 					{
-						self._setOverLinkState("fade-out");
+						this._setOverLinkState("fade-out");
 					}
 				]]></body>
 			</method>
@@ -258,16 +214,6 @@
 					this._hideOverLinkImmediately = true;
 					this.setStatus("");
 					this._hideOverLinkImmediately = false;
-				]]></body>
-			</method>
-
-			<method name="_clearOverLinkInterval">
-				<body><![CDATA[
-					if(this._overLinkInterval)
-					{
-						clearInterval(this._overLinkInterval);
-						this._overLinkInterval = null;
-					}
 				]]></body>
 			</method>
 

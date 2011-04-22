@@ -25,9 +25,9 @@ menulist{-moz-appearance:textfield}
 					oncommand="aWin.focus();window.focus()" />
 	<toolbarbutton action='def' label='reset'  type='menu-button' oncommand="doResetOptions(event.target.getAttribute('action'))">
 	  <menupopup>
-		<menuitem action='init' label='reset to initial'/>
-		<menuitem action='last' label='reset to last modified'/>
-		<menuitem action='fact' label='reset to factory settings'/>
+		<menuitem action='init' label=' to initial'/>
+		<menuitem action='last' label=' to last modified'/>
+		<menuitem action='fact' label=' to factory settings'/>
 	  </menupopup>
 	</toolbarbutton >
   </tabs>
