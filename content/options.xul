@@ -20,6 +20,7 @@ menulist{-moz-appearance:textfield}
   <tabs>
 	<tab label='appearance'/>
 	<tab label='user style'/>
+	<tab label='behaviour' oncommand='updatePrefs()'/>
 	<spacer flex='1'/>
 	<toolbarbutton label='&#8251;' tooltiptext='show urlbar'
 					oncommand="aWin.focus();window.focus()" />
@@ -118,17 +119,6 @@ menulist{-moz-appearance:textfield}
       <colorButton/>
     </hbox>
   </groupbox>
-  <!-- ***** - - >
-  <menulist editable="true" preference="pref_one">
-    <menupopup id="window-menu" >
-      <menuitem label="http://www.google.com/search?q="/>
-      <menuitem label="http://www.google.com/search?q="/>
-    </menupopup>
-  </menulist>
-  <preferences>
-    <preference id="pref_one" name="keyword.URL" type="string"/>
-  </preferences>
-  < ! - - ***** -->
 </vbox>
 	</tabpanel>
 	<tabpanel orient='vertical'>
@@ -153,32 +143,48 @@ menulist{-moz-appearance:textfield}
 			}"
 			oninput="(this.button||(this.button=$('updateButton'))).disabled=false;gModified=true;options.additionalCss=this.value"/>
 	</tabpanel>
+	<tabpanel orient='vertical'>
+		<hbox align='center'>
+		  <label value='keyword.URL'/>
+		  <menulist editable="true" id="keyword-URL" oncommand='savePref(this)' oninput='savePref(this)'>
+			<menupopup id="window-menu" >
+			  <menuitem label="http://www.google.com/search?q="/>
+			  <menuitem label="http://www.bing.com/search?q="/>
+			  <menuitem label=""/>
+			</menupopup>
+		  </menulist>
+		</hbox>
+	</tabpanel>
 
   </tabpanels>
 </tabbox>
 <hbox id="bottombox">	
-	<button label="liveEditXBL" oncommand="toggleLiveXBLEditing(this)" 
+	<button label="liveEditXBL" oncommand="toggleLiveXBLEditing(this)" context='dev-context'
 					tooltiptext='reload urlbar.xml (:for developers:)' type='checkbox'/>
-	<toolbarbutton onclick="reloadWin()" label="&#10227;" tooltiptext="reopen this window"/>
+	<toolbarbutton oncommand="reloadWin()" label="&#10227;" tooltiptext="reopen this window" context='dev-context'/>
 	<spacer flex="10"/>
 	<button label="done" oncommand="window.close()//saveChanges()//"/>
 </hbox>
-<devbox id='devbox' hidden='true'>
-	<toolbarbutton label="reload binding" oncommand="xblLiveEdit.update()" context='context'/>
-	<menupopup id='context'>
-		<menuitem label='focus' oncommand="xblLiveEdit.update();aWin.focus()"/>
-		<menuitem label='focus2' oncommand="xblLiveEdit.update();aWin.focus();window.focus()"/>
-		<menuitem label='removeAndAdd' oncommand="xblLiveEdit.removeAndAdd();aWin.focus();window.focus()"/>
-		<menuitem label='unregiter' oncommand="xblLiveEdit.update(false)"/>
-	</menupopup>
+<devbox id='devbox' hidden='true' context='dev-context'>
+	<toolbarbutton label="reload binding" oncommand="xblLiveEdit.update()" />
+
 	<toolbarbutton label='&#8251;' tooltiptext='show urlbar'
 					oncommand="aWin.focus();window.focus()" />
 	<separator class="groove"/>
 	<spacer flex='1' tooltiptext='&#9882;&#9883;&#9884;&#9885;'/>	
 	<shadiaglue buttons='jsMirror,errorConsole' style='-moz-binding: url("chrome://shadia/content/bindings/debug.xml#shadiaGlue");'/> 	
 </devbox>
-
+<menupopup id='dev-context'>
+	<menuitem label='focus' oncommand="xblLiveEdit.update();aWin.focus()"/>
+	<menuitem label='show file' oncommand="getLocalFile(window.location).parent.QueryInterface(Ci.nsILocalFile).launch()"/>
+	<menuitem label='toggle devbar' oncommand="$('devbox').hidden=!$('devbox').hidden;window.sizeToContent()"/>
+	<menuitem label='reset urlbar value' oncommand="resetValueAfterBind()"/>
+	<menuitem label='removeAndAdd' oncommand="xblLiveEdit.removeAndAdd();aWin.focus();window.focus()"/>
+	<menuitem label='unregiter' oncommand="xblLiveEdit.update(false)"/>
+</menupopup>
 <script type="application/x-javascript"><![CDATA[
+var Cc = Components.Classes
+var Ci = Components.interfaces
 reloadWin=function(){
 	if(true||window.opener&&window.opener.document){
 		//window.opener.openDialog(window.location.href,'','top='+screenY+',left='+screenX);
@@ -537,13 +543,73 @@ fixURLBarDisplay = function(init){
 }
 ]]></script>
 
+<script type="application/x-javascript"><![CDATA[	
+var prefBranch
+
+var prefNames = {
+	'keyword-URL':{name:'keyword.URL',type:'string'}
+}
+
+function getPref(prefName, type){
+    try{
+        switch(type || prefBranch.getPrefType(prefName)){
+          case "string":
+          case prefBranch.PREF_STRING:
+            return prefBranch.getCharPref(prefName);
+          case "int":
+          case prefBranch.PREF_INT:
+            return prefBranch.getIntPref(prefName);
+          case "bool":
+          case prefBranch.PREF_BOOL:
+            return prefBranch.getBoolPref(prefName);
+          default:;
+        }
+    }catch(e){}
+}
+
+function setPref(prefName, val, type){
+    try {
+        switch (type || typeof val || prefBranch.getPrefType(prefName)) {
+          case "string":
+          case prefBranch.PREF_STRING:
+            return prefBranch.setCharPref(prefName, val);
+          case "number": case "int": case "float":
+          case prefBranch.PREF_INT:
+            return prefBranch.setIntPref(prefName, val);
+          case "boolean": case "bool":
+          case prefBranch.PREF_BOOL:
+            return prefBranch.setBoolPref(prefName, val);
+          default:
+            return "failed";
+        }
+    }catch(e){}
+}
+
+function updatePrefs(){
+	prefBranch = prefBranch || Cc["@mozilla.org/preferences-service;1"].getService(Ci.nsIPrefService).getBranch('');
+	for(var i in prefNames){
+		var x = prefNames[i]
+		$(i).value = getPref(x.name, x.type);
+	}
+}
+
+function savePref(element){
+	var i = element.id
+	var x = prefNames[i]
+	dump(i)
+	setPref(x.name, element.value, x.type)
+	return true
+}
+
+]]></script>
+
 <script type="application/x-javascript" src='options.js'/>
 <script type="application/x-javascript" src='wheel picker.js'/>
 
 <script type="application/x-javascript"><![CDATA[
 //activate shadiaglue
 document.getElementsByTagName('shadiaglue')[0]
-/*try{
+try{
 	if( gChromeReg.convertChromeURL(ios.newURI(window.location.href,null,null)).scheme=='file'){
 		let c=$('devbox')
 		c.firstChild.id='devbox'
@@ -551,7 +617,7 @@ document.getElementsByTagName('shadiaglue')[0]
 		c.id='devbox2'
 		c.hidden=false
 	}
-}catch(e){}*/
+}catch(e){}
 /**************************************\     //***************************************
  **       * *    * **  ** ** ** *       \   //       ** *** ***  *** ** ***        **
  * *     *   *  * **    ** ** ****       \ //       ** * ** **    **** * ***      * *
