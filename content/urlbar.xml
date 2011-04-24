@@ -33,7 +33,7 @@
 		</xul:vbox>
 	</xul:vbox>
 
-	<html:hbox  anonid="stsegment-layer" class="smart-text" flex="1"  style="display:none;"
+	<html:hbox  anonid="stsegment-layer" class="smart-text" style="display:none;"
 		ondragover="gURLBar.layerManager.makePlain()"  ondragexit="nsDragAndDrop.dragExit(event, gURLBar);"/>
 
 

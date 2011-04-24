@@ -23,6 +23,7 @@ stsegment{
 	padding-left:1px;
 	overflow:hidden;
 	display:-moz-box;
+	-moz-box-flex:1;
 }
 .smart-text-inner{
 	overflow:visible;
