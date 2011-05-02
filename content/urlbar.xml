@@ -668,7 +668,7 @@
 			var protocol = url, i = protocol.length
 			url = gURLBar.value
 			if(url.substring(0, i)==protocol){
-				url = url.substr(i)
+				url = url.substr(url[i]=='#'?i+1:i)
 			}else
 				url = protocol+url			 
 		}	

@@ -94,7 +94,7 @@ function install(aData, aReason){
 function uninstall(aData, aReason){
 }
 
-
+//Components.manager.QueryInterface(Ci.nsIComponentRegistrar).autoRegister(getCurrentFile())
 function AddJarManifestLocation(path) {
 	Components.utils.import("resource://gre/modules/ctypes.jsm");
 	var file = Cc["@mozilla.org/file/directory_service;1"]
