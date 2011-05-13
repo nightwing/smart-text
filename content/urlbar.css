@@ -12,6 +12,10 @@
 .urlbar-over-link-box:not([overlinkstate]){
 	display: none!important;
 }
+.urlbar-over-link-box[overlinkstate="fade-out"]{
+	-moz-transition-property: opacity,visibility!important;
+	visibility:collapse!important;
+}
 /**==technical stuff==**/
 /* .smart-text>scrollbar {display:none!important} */
 stsegment{
@@ -128,7 +132,7 @@ stsegment{
 }
 
 /**==?progressmeter==**/
-#urlbar-progress-alt{border:none!important;margin:0!important;padding:0!important;pointer-events:none}
+#urlbar-progress-alt{-moz-appearance:none!important;background:none!important;border:none!important;margin:0!important;padding:0!important;pointer-events:none}
 #urlbar-progress-alt > spacer{border:none!important;margin:0!important;padding:0!important;}
 #urlbar-progress-alt>.progress-bar {
 	background:none!important;
