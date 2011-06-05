@@ -4,7 +4,7 @@
   <r:Description about="urn:mozilla:install-manifest">
     <id>smart@text-a.am</id>
     <name>smart text</name>
-    <version>4.5</version>
+    <version>4.7</version>
     <homepageURL>http://foximirror.blogspot.com/</homepageURL>
     <description>Formated linkified and selectable text in Location bar.</description>
     <creator>blackadder</creator>
@@ -19,7 +19,7 @@
       <r:Description>
         <id>{ec8030f7-c20a-464f-9b0e-13a3a9e97384}</id>
         <minVersion>4.0b1</minVersion>
-        <maxVersion>6.0a1</maxVersion>
+        <maxVersion>7.0a1</maxVersion>
       </r:Description>
     </targetApplication>
   </r:Description>

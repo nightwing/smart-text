@@ -322,7 +322,7 @@
 	//create protocol node
 		this.inds=[0]
 		var i1= url.indexOf(":")+1
-		url[i1]=='/' && ++i1 && url[i1]=='/' && ++i1
+		while(url[i1]=='/') ++i1
 		this.createElem("protocol",0,i1);
 	//look for subdomain
 		var host = uri.host, is=i1;
