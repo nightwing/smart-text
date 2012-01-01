@@ -100,8 +100,7 @@
 
     <property name="contentIsCropped" onget="return false;" onset="return false;"/>
 
-    <property name="value"
-                onget="return (this.hasAttribute('isempty') || this.hasAttribute('empty')) ? '' : this.inputField.value;">
+    <property name="value"  onget="return this.inputField.value;">
         <setter><![CDATA[
 			try{
 				val = val.replace(/%../g, function(s){try{return decodeURIComponent(s)}catch(e){return s}});
