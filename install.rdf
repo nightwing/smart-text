@@ -4,22 +4,21 @@
   <r:Description about="urn:mozilla:install-manifest">
     <id>smart@text-a.am</id>
     <name>smart text</name>
-    <version>4.7</version>
+    <version>5.0</version>
     <homepageURL>http://foximirror.blogspot.com/</homepageURL>
     <description>Formated linkified and selectable text in Location bar.</description>
-    <creator>blackadder</creator>
+    <creator></creator>
 	
 	<optionsURL>chrome://smarttext/content/options.xul</optionsURL>
-<!--<iconURL>chrome://smarttext/content/icon.png</iconURL>
-	<unpack>true</unpack>	
-    <bootstrap>true</bootstrap>-->
+
+    <bootstrap>true</bootstrap>
     <type>2</type>
 
     <targetApplication>
       <r:Description>
         <id>{ec8030f7-c20a-464f-9b0e-13a3a9e97384}</id>
-        <minVersion>4.0b1</minVersion>
-        <maxVersion>7.0a1</maxVersion>
+        <minVersion>8.0b1</minVersion>
+        <maxVersion>12.0a1</maxVersion>
       </r:Description>
     </targetApplication>
   </r:Description>

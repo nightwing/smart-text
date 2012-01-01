@@ -22,45 +22,11 @@ function updateStyle(register, file){
 }
 
 
-//
-loadIntoWindow=function(mWindow){
-	Cc["@mozilla.org/moz/jssubscript-loader;1"].createInstance(Ci.mozIJSSubScriptLoader)
-					.loadSubScript( __SCRIPT_URI_SPEC__+'/../content/options.js', mWindow);
-}
-
-
-WindowListener={
-	onOpenWindow: function(aWindow){
-		let wm = Cc["@mozilla.org/appshell/window-mediator;1"].getService(Ci.nsIWindowMediator);
-		// Wait for the window to finish loading
-		let domWindow = aWindow.QueryInterface(Ci.nsIInterfaceRequestor).getInterface(Ci.nsIDOMWindowInternal).window;
-		if(domWindow.document.documentElement.getAttribute("windowtype")!='navigator:browser')
-			return;
-		wm.removeListener(WindowListener);
-		domWindow.addEventListener("load", function() {
-			domWindow.removeEventListener("load", arguments.callee, false);
-			loadIntoWindow(domWindow)
-		}, false); 
-	},
-	onCloseWindow: function(aWindow){ },
-	onWindowTitleChange: function(aWindow, aTitle){ },
-	waitForFirst: function(){
-		let wm = Cc["@mozilla.org/appshell/window-mediator;1"].getService(Ci.nsIWindowMediator);
-		let win = wm.getMostRecentWindow("navigator:browser");
-		if(win)
-			loadIntoWindow(win)
-		else{
-			wm.addListener(WindowListener);			
-		}
-	}
-}
-
-
 /**************************************************************************
  * bootstrap.js API
  *****************/
 function startup(aData, aReason) {
-	AddJarManifestLocation(aData.installPath.path)
+	AddManifestLocation(aData.installPath)
 	
 	var file=getCssFile()
 	if(file.exists())
@@ -86,6 +52,8 @@ function shutdown(aData, aReason) {
 	wm.removeListener(WindowListener);
 
 	updateStyle(false, getCssFile())	
+	
+	removeManifestLocation(aData.installPath)
 }
 
 function install(aData, aReason){
@@ -94,12 +62,29 @@ function install(aData, aReason){
 function uninstall(aData, aReason){
 }
 
-//Components.manager.QueryInterface(Ci.nsIComponentRegistrar).autoRegister(getCurrentFile())
+AddManifestLocation = function(file){
+	Components.manager.QueryInterface(Ci.nsIComponentRegistrar)
+	if(Components.manager.addBootstrappedManifestLocation){
+		Components.manager.addBootstrappedManifestLocation(file)
+		return
+	}
+	if(file.path.substr(-4) == ".xpi")
+		AddJarManifestLocation(file.path)
+	else
+		Components.manager.autoRegister(file)
+}
+removeManifestLocation = function(file){
+	Components.manager.QueryInterface(Ci.nsIComponentRegistrar)
+	if(Components.manager.removeBootstrappedManifestLocation){
+		Components.manager.removeBootstrappedManifestLocation(file)
+		return
+	}	
+}
 function AddJarManifestLocation(path) {
 	Components.utils.import("resource://gre/modules/ctypes.jsm");
 	var file = Cc["@mozilla.org/file/directory_service;1"]
 				.getService(Ci.nsIProperties)
-				.get("resource:app", Ci.nsIFile);
+				.get("XCurProcD", Ci.nsIFile);
 	file.append(ctypes.libraryName("xul"));
 	var libxul = ctypes.open(file.path);
   

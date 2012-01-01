@@ -667,7 +667,7 @@ var xblLiveEdit = (function(){
 		if(!useDataURI)
 			return text
 		else 
-			return "data:text/xml" + ";base64," + btoa(text);
+			return "data:text/css" + ";base64," + btoa(text);
 	}
 	
 	function removeAndAdd(el){
