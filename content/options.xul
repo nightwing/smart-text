@@ -176,7 +176,7 @@ menulist{-moz-appearance:textfield}
 </devbox>
 <menupopup id='dev-context'>
 	<menuitem label='focus' oncommand="xblLiveEdit.update();aWin.focus()"/>
-	<menuitem label='show file' oncommand="getLocalFile(window.location).parent.QueryInterface(Ci.nsILocalFile).launch()"/>
+	<menuitem label='show file' oncommand="cssFile.QueryInterface(Ci.nsILocalFile).reveal()"/>
 	<menuitem label='toggle devbar' oncommand="$('devbox').hidden=!$('devbox').hidden;window.sizeToContent()"/>
 	<menuitem label='reset urlbar value' oncommand="resetValueAfterBind()"/>
 	<menuitem label='removeAndAdd' oncommand="xblLiveEdit.removeAndAdd();aWin.focus();window.focus()"/>

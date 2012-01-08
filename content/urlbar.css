@@ -145,12 +145,12 @@ stsegment{
 stsegment.basedomain{
 	font-weight:bold;
 }
-/**==?hide?HTTP==**/stsegment.www,
-/**==?hide?go==**/#go-button,
-/**==?hide?identityLabel==**/#identity-icon-label,#identity-icon-country-label,
-/**==?hide?ellipsis==**/.smart-text-ellipsis,
+/**==?hide?HTTP==**/stsegment.www ,
+/**==?hide?go==**/#go-button ,
+/**==?hide?identityLabel==**/#identity-icon-label,#identity-icon-country-label,#identity-icon-labels ,
+/**==?hide?ellipsis==**/.smart-text-ellipsis ,
 /**==-3-?hide==**/{
-	display:none;
+	display:none!important;
 }
 /**==?bubble==**/
 stsegment.basedomain{

@@ -1,6 +1,25 @@
+/*devel__(*/
+try{
+	dump = Components.utils.import("resource://shadia/main.js").dump
+}catch(e){
+	dump = function () {
+		var aMessage = ": ";
+		for (var i = 0, l = arguments.length; i < l; ++i) {
+			var a = arguments[i];
+			aMessage += (a && !a.toString ? "[object call]" : a) + " , ";
+		}
+		var stack = Components.stack.caller;
+		var consoleMessage = Cc['@mozilla.org/scripterror;1'].createInstance(Ci.nsIScriptError);
+		consoleMessage.init(aMessage, stack.filename, null, stack.lineNumber, 0, 9, "component javascript");
+		Services.console.logMessage(consoleMessage);
+	}
+}
+/*devel__)*/
+
 /******************************************************************/
 var Cc = Components.classes;
 var Ci = Components.interfaces;
+var Cu = Components.utils;
 Components.utils.import("resource://gre/modules/Services.jsm");
 
 
@@ -23,34 +42,37 @@ function updateStyle(register, file){
 
 
 //
-loadIntoWindow = function(mWindow){
-	Services.scriptloade.loadSubScript( __SCRIPT_URI_SPEC__+'/../content/options.js', mWindow);
+loadIntoWindow = function(mWindow) {
+	Services.scriptloader.loadSubScript( __SCRIPT_URI_SPEC__+'/../content/options.js', mWindow);
 }
 
 
 WindowListener={
-	onOpenWindow: function(aWindow){
+	onOpenWindow: function(win){
+		dump("::::::::::::::::::---", win.document.documentElement.getAttribute("windowtype"))
 		let wm = Services.wm
 		// Wait for the window to finish loading
-		let domWindow = aWindow.QueryInterface(Ci.nsIInterfaceRequestor).getInterface(Ci.nsIDOMWindowInternal).window;
-		if (domWindow.document.documentElement.getAttribute("windowtype")!='navigator:browser')
+		win = win.QueryInterface(Ci.nsIInterfaceRequestor).getInterface(Ci.nsIDOMWindow).window;
+		if (win.document.documentElement.getAttribute("windowtype")!='navigator:browser')
 			return;
 		wm.removeListener(WindowListener);
-		domWindow.addEventListener("load", function() {
-			domWindow.removeEventListener("load", arguments.callee, false);
-			loadIntoWindow(domWindow)
+		win.addEventListener("load", function onLoad() {
+			win.removeEventListener("load", onLoad, false);
+			loadIntoWindow(win)
 		}, false);
 	},
-	onCloseWindow: function(aWindow){ },
-	onWindowTitleChange: function(aWindow, aTitle){ },
+	onCloseWindow: function(win){ },
+	onWindowTitleChange: function(win, aTitle){ },
 	waitForFirst: function(){
 		let wm = Services.wm
 		let win = wm.getMostRecentWindow("navigator:browser");
+		
 		if(win)
 			loadIntoWindow(win)
-		else{
+		else
 			wm.addListener(WindowListener);
-		}
+	
+		dump(win)
 	}
 }
 
@@ -60,14 +82,12 @@ WindowListener={
  *****************/
 function startup(aData, aReason) {
 	if (Services.vc.compare(Services.appinfo.platformVersion, "10.0") < 0)
-		Components.manager.QueryInterface(Ci.nsIComponentRegistrar)
-						.addBootstrappedManifestLocation(aData.installPath)
+		Components.manager.QueryInterface(Ci.nsIComponentRegistrar).addBootstrappedManifestLocation(aData.installPath)
 
-
-	var file = getCssFile()
+	/* var file = getCssFile()
 	if(file.exists())
 		updateStyle(true, file)
-	else
+	else */
 		WindowListener.waitForFirst()
 }
 

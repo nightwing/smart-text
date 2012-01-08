@@ -49,12 +49,6 @@ function makeReq(href){
 function createStyleFile(){
 	var text = compileCss(options)
 
-	/*var binding = makeReq(contentRoot+'urlbar.xml')
-	var css = makeReq(contentRoot+'urlbar.css')
-	
-	/*var binding = "data:text/xml" + ";base64," + btoa(binding);*/
-
-	//text = css.replace( 'chrome://smarttext/content/ce/urlbar.xml#urlbar', binding )
 	writeToFile(cssFile, text)
 }
 
@@ -198,6 +192,7 @@ if(window.location.href.indexOf(contentRoot)==-1){
 	window.Cu = Cu
 	window.cssFileHref = cssFileURI.spec
 	window.cssFileURI = cssFileURI
+	window.cssFile = cssFile
 	window.extend = extend
 }
 })()
