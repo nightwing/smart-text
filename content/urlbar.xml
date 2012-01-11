@@ -43,13 +43,6 @@
 </xul:hbox>
 </xul:hbox>
 
-<xul:hbox flex="1" style='pointer-events:none' class="elipsis-mask" >
-	<xul:vbox flex='1' class='f' >
-		<xul:vbox  flex='3' style='pointer-events:auto'/>
-		<xul:vbox  flex='5' style='pointer-events:auto'/>
-	</xul:vbox>
-	<xul:hbox style='pointer-events:auto;min-width:80px'/>
-</xul:hbox>
 </xul:stack>
 
 
@@ -838,7 +831,7 @@
 		}
 
 
-		this.state = gURLBar.layerManager.lastTarget.type
+		this.state = 'left'//------------------------------------------
 		this.anchorOffset = this.focusOffset = this.offsetFromStart(e.rangeParent, e.rangeOffset)
 
 
@@ -1099,19 +1092,11 @@
 	inputLayer: this.inputField.parentNode.parentNode,
 	smartLayer: this.stsegmentLayer,
 	inputElement: this.inputField,
-	elipsisMask:document.getAnonymousElementByAttribute(this, "class", "elipsis-mask"),
 
 	containerElement: this.stsegmentLayer.parentNode,
 	init: function(){
-		this.elipsisMask.addEventListener("mouseover", this, true)
-		var l = this.elipsisMask.lastChild
-		l.type = 'left'
-		l.previousSibling.lastChild.type = 'top'
-
-		this.lastTarget=l
 	},
 	makePretty: function(){
-		this.elipsisMask.style.display=""
 		this.smartLayer.style.display=""
 
 		var pstyle=this.inputLayer.style
@@ -1121,7 +1106,6 @@
 		gURLBar.plain=false;
 	},
 	makePlain: function(){
-		this.elipsisMask.style.display="none"
 		var scrollLeft=this.smartLayer.scrollLeft
 		this.smartLayer.style.display="none"
 
@@ -1156,19 +1140,7 @@
 		return true;
 	},
 	handleEvent: function(e){
-		var [l1,l2]=[this.lastTarget, e.target]
-		var clist=gURLBar.plain? gURLBar.layerManager.inputLayer.classList:
-								 gURLBar.layerManager.smartLayer.classList;
-		l1.type&&clist.remove(l1.type)
-		l2.type&&clist.add(l2.type)
-
-		//l1.style.background=''
-		l1.style.pointerEvents='auto'
-
-		//l2.style.background='rgba(150,150,200,0.1)'
-		l2.style.pointerEvents='none'
-
-		this.lastTarget=l2
+		
 	}
 })]]></field>
 

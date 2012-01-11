@@ -1,6 +1,6 @@
 /*devel__(*/
 try{
-	dump = Components.utils.import("resource://shadia/main.js").dump
+	var dump = Components.utils.import("resource://shadia/main.js").dump
 }catch(e){
 	dump = function () {
 		var aMessage = ": ";
@@ -12,6 +12,7 @@ try{
 		var consoleMessage = Cc['@mozilla.org/scripterror;1'].createInstance(Ci.nsIScriptError);
 		consoleMessage.init(aMessage, stack.filename, null, stack.lineNumber, 0, 9, "component javascript");
 		Services.console.logMessage(consoleMessage);
+		return arguments[0]
 	}
 }
 /*devel__)*/
@@ -49,16 +50,24 @@ loadIntoWindow = function(mWindow) {
 
 WindowListener={
 	onOpenWindow: function(win){
-		dump("::::::::::::::::::---", win.document.documentElement.getAttribute("windowtype"))
+		win = win.QueryInterface(Ci.nsIInterfaceRequestor).getInterface(Ci.nsIDOMWindow).window;
+		dump("::::::::::::::::::---")
+		dump(win) &&
+		dump(win.document) &&
+		dump(win.document.documentElement) &&
+		dump(win.document.documentElement.getAttribute("windowtype"))
 		let wm = Services.wm
 		// Wait for the window to finish loading
-		win = win.QueryInterface(Ci.nsIInterfaceRequestor).getInterface(Ci.nsIDOMWindow).window;
-		if (win.document.documentElement.getAttribute("windowtype")!='navigator:browser')
-			return;
-		wm.removeListener(WindowListener);
 		win.addEventListener("load", function onLoad() {
+			dump("INSIDE---")
 			win.removeEventListener("load", onLoad, false);
+			if (win.document.documentElement.getAttribute("windowtype")!='navigator:browser')
+				return;
+			if (WindowListener.loaded)
+				return
+			wm.removeListener(WindowListener);			
 			loadIntoWindow(win)
+			WindowListener.loaded = true
 		}, false);
 	},
 	onCloseWindow: function(win){ },
@@ -67,7 +76,7 @@ WindowListener={
 		let wm = Services.wm
 		let win = wm.getMostRecentWindow("navigator:browser");
 		
-		if(win)
+		if (win)
 			loadIntoWindow(win)
 		else
 			wm.addListener(WindowListener);
@@ -84,10 +93,10 @@ function startup(aData, aReason) {
 	if (Services.vc.compare(Services.appinfo.platformVersion, "10.0") < 0)
 		Components.manager.QueryInterface(Ci.nsIComponentRegistrar).addBootstrappedManifestLocation(aData.installPath)
 
-	/* var file = getCssFile()
-	if(file.exists())
+	var file = getCssFile()
+	if (file.exists())
 		updateStyle(true, file)
-	else */
+	else
 		WindowListener.waitForFirst()
 }
 
@@ -114,3 +123,6 @@ function shutdown(aData, aReason) {
 					.removeBootstrappedManifestLocation(aData.installPath)
 }
 
+
+function install(){}
+function uninstall(){}
