@@ -13,49 +13,46 @@
           xmlns:xul="http://www.mozilla.org/keymaster/gatekeeper/there.is.only.xul"
           xmlns:xbl="http://www.mozilla.org/xbl">
 	<binding id="urlbar" extends="chrome://browser/content/urlbarBindings.xml#urlbar" inheritstyle ="true">
-		<content sizetopopup="pref" >
-			<xul:hbox class="autocomplete-textbox-container urlbar-textbox-container" flex="1">
-				<children includes="image|deck|stack|box">
-					<xul:image class="autocomplete-icon" allowevents="true"/>
-				</children>
 
-<xul:stack flex="1" anonid="stack" class="urlbar-stack1" context=''>
-    <children includes="progressmeter"/>
-
-<xul:hbox flex="1" >
-<xul:hbox flex="1" class="st-layers">
-	<xul:vbox flex="1" anonid="textbox-input-box" class="textbox-input-box plain " align="stretch">
-	   <xul:vbox anonid="textbox-input-box-inner" xbl:inherits="tooltiptext=inputtooltiptext"
-				 flex="1" >
-			<html:input anonid="input" class="autocomplete-textbox textbox-input smart-text-input" style="cursor:inherit"
-						flex="1" allowevents="true"
-						xbl:inherits="tooltiptext=inputtooltiptext,onfocus,onblur,value,type,maxlength,disabled,size,readonly,userAction"/>
-		</xul:vbox>
-	</xul:vbox>
-
-	<html:hbox  anonid="stsegment-layer" class="smart-text" style="display:none;"
-		ondragover="gURLBar.layerManager.makePlain()"  ondragexit="nsDragAndDrop.dragExit(event, gURLBar);"/>
-
-
-	<xul:box anonid="overflow-ellipsis" class="smart-text-ellipsis" onclick="gURLBar.inputclicks.elipsisClick(event);"
-				style="-moz-user-select:none;-moz-box-align:center" ><html:div>...</html:div></xul:box>
-
-</xul:hbox>
-</xul:hbox>
-
-</xul:stack>
-
-
-<children includes="hbox"/>
-
+<content sizetopopup="pref">
+	<xul:hbox class="autocomplete-textbox-container urlbar-textbox-container" flex="1">
+		<children includes="image|deck|stack|box">
+			<xul:image class="autocomplete-icon" allowevents="true" />
+		</children>
+		<xul:stack flex="1" anonid="stack" class="urlbar-stack1" context=''>
+			<children includes="progressmeter" />
+			<xul:hbox flex="1">
+				<xul:hbox flex="1" class="st-layers">
+					<xul:hbox flex="1" anonid="textbox-input-box"
+								class="textbox-input-box plain urlbar-input-box">
+						<html:input anonid="input" style="cursor:inherit" flex="1" allowevents="true"
+								class=" autocomplete-textbox textbox-input smart-text-input uri-element-right-align"
+								xbl:inherits="tooltiptext=inputtooltiptext,onfocus,onblur,value,type,maxlength,disabled,size,readonly,userAction"
+						/>
+						<xul:hbox anonid="stsegment-layer" class="smart-text" style="display:none;" 
+											ondragover="gURLBar.layerManager.makePlain()"
+											ondragexit="nsDragAndDrop.dragExit(event, gURLBar);">
+							<html:hbox/>	
+						</xul:hbox>
+					</xul:hbox>
+					<xul:box anonid="overflow-ellipsis" class="smart-text-ellipsis"
+								onclick="gURLBar.inputclicks.elipsisClick(event);"
+								style="-moz-user-select:none;-moz-box-align:center">
+						<html:div>...</html:div>
+					</xul:box>
+				</xul:hbox>
 			</xul:hbox>
-			<xul:dropmarker anonid="historydropmarker" class="autocomplete-history-dropmarker urlbar-history-dropmarker" allowevents="true" xbl:inherits="open,enablehistory"/>
-			<children/>
-			<xul:popupset anonid="popupset" class="autocomplete-result-popupset"/>
-		</content>
+		</xul:stack>
+		<children includes="hbox" />
+	</xul:hbox>
+	<xul:dropmarker anonid="historydropmarker" class="autocomplete-history-dropmarker urlbar-history-dropmarker"
+									allowevents="true" xbl:inherits="open,enablehistory" />
+	<children/>
+	<xul:popupset anonid="popupset" class="autocomplete-result-popupset" />
+</content>
 
 
-    <implementation implements=" nsIObserver">
+<implementation implements=" nsIObserver">
     <constructor><![CDATA[  //nsIDOMEventListener,
 		var p=this.parentNode
 		if(p.stMouseDown)
@@ -79,16 +76,16 @@
         //
     ]]></destructor>
 
-    <field name="inputBox">
-        document.getAnonymousElementByAttribute(this, "anonid", "textbox-input-box");
-      </field>
-    <field name="inputBoxInner">
-        document.getAnonymousElementByAttribute(this, "anonid", "textbox-input-box-inner");
-      </field>
+		<field name="inputBox">
+			document.getAnonymousElementByAttribute(this, "anonid", "textbox-input-box");
+		</field>
+		<field name="inputBoxInner">
+			document.getAnonymousElementByAttribute(this, "anonid", "textbox-input-box-inner");
+		</field>
     <field name="stsegmentLayer">
-        document.getAnonymousElementByAttribute(this, "anonid", "stsegment-layer");
-    </field>
-    <field name="_focused"/>
+			document.getAnonymousElementByAttribute(this, "anonid", "stsegment-layer");
+		</field>
+		<field name="_focused"/>
 
 
     <property name="contentIsCropped" onget="return false;" onset="return false;"/>
@@ -1089,7 +1086,7 @@
 
 <field name="layerManager"><![CDATA[({
 	bar:this,
-	inputLayer: this.inputField.parentNode.parentNode,
+	inputLayer: this.inputField.parentNode,
 	smartLayer: this.stsegmentLayer,
 	inputElement: this.inputField,
 
@@ -1100,14 +1097,14 @@
 		this.smartLayer.style.display=""
 
 		var pstyle=this.inputLayer.style
-		pstyle.maxWidth="0"
+		//pstyle.maxWidth="0"
 
 		this.smartLayer.scrollLeft = this.inputElement.editor.rootElement.scrollLeft;
 		gURLBar.plain=false;
 	},
 	makePlain: function(){
 		var scrollLeft=this.smartLayer.scrollLeft
-		this.smartLayer.style.display="none"
+		//this.smartLayer.style.display="none"
 
 		var pstyle=this.inputLayer.style
 		pstyle.maxWidth=""

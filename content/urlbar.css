@@ -18,25 +18,26 @@
 }
 /**==technical stuff==**/
 /* .smart-text>scrollbar {display:none!important} */
+.urlbar-input-box{
+	display:-moz-stack;
+	overflow:hidden;
+}
 stsegment{
-	white-space: pre;
-	display:block;
+	display: inline-block;
 }
 .smart-text{
+	white-space: pre;
 	color:$baseColor$;
 	padding-left:1px;
-	overflow:hidden;
-	display:-moz-box;
-	-moz-box-flex:1;
+	display: -moz-box;
+	-moz-box-align:center
 }
 .smart-text-inner{
-	overflow:visible;
-	display:-moz-box;
-	-moz-box-flex:1;
-	-moz-box-align: stretch;
+	overflow:hidden;
+	display:inline-block;
 }
 stsegment.smart-text-end{
-	display:-moz-box;
+	display: inline;
 	-moz-box-flex:1;
 }
 
@@ -120,11 +121,12 @@ stlink:hover{
 
 /**==sizes==**/
 stsegment{
-	padding: $padding$px 0px;
-	line-height: $lineHeight$px;
+	/*padding: $padding$px 0px;
+	line-height: $lineHeight$px;*/
+	padding:0
 }
 .smart-text-input,.st-layers {
-	min-height:$barHeight$px;
+	/* min-height:$barHeight$px; */
 	font-size:$fontSize$px!important;
 }
 .st-layers {
