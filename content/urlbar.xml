@@ -448,7 +448,11 @@
 					this.scroll=true
 				e.preventDefault();e.stopPropagation()
 			}else
-				this.scrollLeft+=(e.detail>0?1:-1)*15
+				this.left-=(e.detail>0?1:-1)*15
+				if(this.left>0)
+					this.left=0
+				else if(this.left<-this.parentNode.offsetWidth)
+					this.left=-this.parentNode.offsetWidth
 		}, true);
 
 		this.container.addEventListener("mousedown", this, true);
@@ -1096,18 +1100,20 @@
 	makePretty: function(){
 		this.smartLayer.style.display=""
 
-		var pstyle=this.inputLayer.style
-		//pstyle.maxWidth="0"
+		var pstyle=this.inputLayer.firstChild.style
+		pstyle.maxWidth=
+		pstyle.opacity="0"
 
 		this.smartLayer.scrollLeft = this.inputElement.editor.rootElement.scrollLeft;
 		gURLBar.plain=false;
 	},
 	makePlain: function(){
 		var scrollLeft=this.smartLayer.scrollLeft
-		//this.smartLayer.style.display="none"
+		this.smartLayer.style.display="none"
 
-		var pstyle=this.inputLayer.style
-		pstyle.maxWidth=""
+		var pstyle=this.inputLayer.firstChild.style
+		pstyle.maxWidth=
+		pstyle.opacity=""
 		//pstyle.visibility=""
 
 		this.inputElement.editor.rootElement.scrollLeft = scrollLeft;
