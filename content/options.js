@@ -164,7 +164,6 @@ if(window.location.href.indexOf(contentRoot)==-1){
 	//createStyleFile(cssFile)
 	var onLoad=function(){
 		window.removeEventListener('load',onLoad,false)
-		recomputeLineHeightFromUI(options)
 		var text = compileCss(options)
 		writeToFile(cssFile, text)
 		//for status4evar
@@ -180,8 +179,7 @@ if(window.location.href.indexOf(contentRoot)==-1){
 	window.cssFragmentMap = cssFragmentMap
 	window.defaultOptions = defaultOptions
 	window.initialOptions = extend(options)
-	window.__defineGetter__('factoryOptions', function()recomputeLineHeightFromUI(extend(defaultOptions),aWin))
-	window.recomputeLineHeightFromUI = recomputeLineHeightFromUI
+	window.__defineGetter__('factoryOptions', function()extend(defaultOptions))
 	window.compileCss = compileCss
 	window.prepareCss = prepareCss
 	window.updateStyle = updateStyle

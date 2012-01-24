@@ -828,7 +828,7 @@
 		}
 
 
-		this.state = 'left'//------------------------------------------
+		this.state = gURLBar.layerManager.mode
 		this.anchorOffset = this.focusOffset = this.offsetFromStart(e.rangeParent, e.rangeOffset)
 
 
@@ -964,7 +964,22 @@
 			if (event.button == 2)
 				document.getAnonymousElementByAttribute(gURLBar.inputBox, 'anonid', 'input-box-contextmenu').openPopup(null, 1, event.clientX + 1, event.clientY + 1, true, true)
 		} else if (event.button == 1) {
-			openDialog('chrome://smarttext/content/options.xul', '', 'centerscreen')
+			var toOpenWindowByURI=function(uri){
+				var winEnum = Services.wm.getEnumerator("");
+				while (winEnum.hasMoreElements()) {
+					let win = winEnum.getNext();
+					if (win.closed || win == window) {
+						continue;
+					}
+					if (win.location.href==uri) {
+						win.focus()
+						return true;
+					}
+				}
+				window.open(uri, "_blank", "chrome,extrachrome,menubar,resizable,scrollbars,status,toolbar,centerscreen");
+
+			}
+			toOpenWindowByURI('chrome://smarttext/content/options.xul')
 		}
 	},
 
@@ -1104,6 +1119,7 @@
 	},
 
 	init: function(){
+		this.containerElement.addEventListener("mousemove", this, false)
 	},
 	makePretty: function(){
 		this.smartLayer.style.display=""
@@ -1151,7 +1167,30 @@
 		return true;
 	},
 	handleEvent: function(e){
-
+		var oldMode = this.mode
+		var r = this.containerElement.getBoundingClientRect();
+		var x = e.clientX, y = e.clientY
+		if (e.target == this.smartLayer) {
+			this.mode = "left"
+		} else if (r.left < x && x < r.right) {
+			if (x > r.right - 80) {
+				this.mode = "left"
+			} else {
+				if (y > r.top + 3/5*r.height) {
+					this.mode = "top"
+				}
+			}
+		}
+		
+		if (oldMode != this.mode) {
+			var cl = this.smartLayer.classList
+			cl.remove(oldMode)
+			cl.add(this.mode)
+			var cl = this.containerElement.classList
+			cl.remove(oldMode)
+			cl.add(this.mode)
+		}
+		
 	}
 })]]></field>
 

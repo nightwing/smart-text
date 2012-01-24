@@ -23,7 +23,7 @@
 	overflow:hidden;
 }
 stsegment{
-	display: inline-block;
+	display: inline;
 }
 .smart-text{
 	white-space: pre;
@@ -38,7 +38,6 @@ stsegment{
 }
 stsegment.smart-text-end{
 	display: inline;
-	-moz-box-flex:1;
 }
 
 /**==top bottom==**/
@@ -75,7 +74,7 @@ stsegment.basedomain{
 	color:blue
 }
 .smart-text.left:hover{
-	color: #1A1A1A!important;
+	color: darkblue!important;
 }
 stsegment.selected{
 	color: HighlightText!important;
@@ -125,8 +124,8 @@ stsegment{
 	line-height: $lineHeight$px;*/
 	padding:0
 }
-.smart-text-input,.st-layers {
-	/* min-height:$barHeight$px; */
+.st-layers {
+	min-height:$barHeight$px;
 	font-size:$fontSize$px!important;
 }
 .st-layers {
@@ -163,7 +162,6 @@ stsegment.basedomain{
 	box-shadow: 0pt 0pt 0pt 1px rgba(0, 0, 0, 0.2) inset;
 	background-image: -moz-linear-gradient(rgba(255, 255, 255, 0.25), rgba(0, 0, 0, 0.15));
 	border-radius: 2px; 
-	padding-top:1px;padding-bottom:1px;
 /**==?bubble=2==**/
 	padding-left:2px;padding-right:2px
 }

@@ -424,22 +424,11 @@ optionsFromUi = function(options){
 		else 
 			options[x.id] = $(x.id).value
 	})
-	updateComputableOptions(options)	
 }
 function updateOption(element){
 	//Todo
 }
-updateComputableOptions = function(options){
-	options.lineHeight = Math.ceil( options.fontSize*1.2 )	
-	if(options.barHeight < options.lineHeight)
-		options.barHeight = options.lineHeight
-	
-	options.padding=(options.barHeight-options.lineHeight)/2;
-	if(options.padding-Math.floor(options.padding)>0){
-		options.lineHeight--;
-		options.padding=(options.barHeight-options.lineHeight)/2;
-	}	
-}
+
 optionsToUi = function(options){
 	gConfig.forEach(function(x){
 		if(x.type=='number'||x.type=='color'||x.type=='text')
