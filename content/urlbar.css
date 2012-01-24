@@ -163,6 +163,7 @@ stsegment.basedomain{
 	box-shadow: 0pt 0pt 0pt 1px rgba(0, 0, 0, 0.2) inset;
 	background-image: -moz-linear-gradient(rgba(255, 255, 255, 0.25), rgba(0, 0, 0, 0.15));
 	border-radius: 2px; 
+	padding-top:1px;padding-bottom:1px;
 /**==?bubble=2==**/
 	padding-left:2px;padding-right:2px
 }

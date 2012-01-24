@@ -31,9 +31,7 @@
 						/>
 						<xul:hbox anonid="stsegment-layer" class="smart-text" style="display:none;" 
 											ondragover="gURLBar.layerManager.makePlain()"
-											ondragexit="nsDragAndDrop.dragExit(event, gURLBar);">
-							<html:hbox/>	
-						</xul:hbox>
+											ondragexit="nsDragAndDrop.dragExit(event, gURLBar);" />
 					</xul:hbox>
 					<xul:box anonid="overflow-ellipsis" class="smart-text-ellipsis"
 								onclick="gURLBar.inputclicks.elipsisClick(event);"
@@ -54,8 +52,8 @@
 
 <implementation implements=" nsIObserver">
     <constructor><![CDATA[  //nsIDOMEventListener,
-		var p=this.parentNode
-		if(p.stMouseDown)
+		var p = this.parentNode
+		if (p.stMouseDown)
 			p.removeEventListener('mousedown',p.stMouseDown,true)
 		p.addEventListener('mousedown', p.stMouseDown = this.fixGURLBarPaddingClick, true)
 
@@ -176,22 +174,21 @@
 ]]></body></method>
 <method name="fixGURLBarPaddingClick"><parameter name="event"/><body><![CDATA[
 	//needed to allow clicks on padding
-	if(event.originalTarget==gURLBar&&!gURLBar.fixPaddingClick_timeOut){
+	if (!gURLBar.fixPaddingClick_timeOut && (
+		event.originalTarget==gURLBar || 
+		(event.originalTarget == gURLBar.parentNode && event.button == 2)
+	)) {
 		var r=gURLBar.stsegmentLayer.getBoundingClientRect()
 		if(r.left<event.clientX && event.clientX<r.right){
 			event.preventDefault()
 			event.stopPropagation()
 			var utils = (window.getInterface ||
 					window.QueryInterface(Ci.nsIInterfaceRequestor).getInterface)(Ci.nsIDOMWindowUtils)
- 			gURLBar.layerManager.elipsisMask.style.display='none'
- 			gURLBar.selectionManager.fixGURLBarPaddingClick=true
-			var args=['mousemove',event.clientX, r.top+2, event.button, event.clickCount, null]
-			utils.sendMouseEventToWindow.apply(utils, args)
-			utils.sendMouseEventToWindow.apply(utils, args)
-			utils.sendMouseEventToWindow.apply(utils, args)
+
+			gURLBar.selectionManager.fixGURLBarPaddingClick=true
 			this.fixPaddingClick_timeOut = true;
-			setTimeout('gURLBar.fixPaddingClick_timeOut=null', 10)
-			args[0]='mousedown'
+			setTimeout('gURLBar.fixPaddingClick_timeOut=null', 10) 
+			var args=[event.type, event.clientX, r.top+2, event.button, event.clickCount, null]
 			utils.sendMouseEventToWindow.apply(utils, args)
 		}
 	}
@@ -736,7 +733,6 @@
 
 	onMouseUp: function(e, cursorMode){
 		if(this.fixGURLBarPaddingClick){
-			gURLBar.layerManager.elipsisMask.style.display=''
  			this.fixGURLBarPaddingClick=false
 		}
 		if(e.button==2){
@@ -885,7 +881,7 @@
 		var range = document.createRange();
 
 		range.setStart(node, offset)
-		range.setStart(node, offset)
+		range.setEnd(node, offset)
 		var b1 = range.getBoundingClientRect()
 		range.detach()
 
@@ -938,137 +934,140 @@
 <field name="inputclicks"><![CDATA[({
 	p: this.inputField,
 
-	init: function(){
+	init: function() {
 		this.p.addEventListener("mousedown", this, true);
 		this.p.addEventListener("mouseup", this, true);
 	},
 
-	stopEvent: function(event){
-		event.stopPropagation();event.preventDefault()
+	stopEvent: function(event) {
+		event.stopPropagation();
+		event.preventDefault()
 	},
 
-	elipsisClick: function(event){
-		if(event.button==0){
-			var e,l,p
-			p=this.p
-			l=p.value.length;
-			if(l!=0&&0==p.selectionStart&&l==p.selectionEnd){
-				p.selectionStart=l
-			}else{
+	elipsisClick: function(event) {
+		if (event.button == 0) {
+			var e, l, p
+			p = this.p
+			l = p.value.length;
+			if (l != 0 && 0 == p.selectionStart && l == p.selectionEnd) {
+				p.selectionStart = l
+			} else {
 				p.select();
 			}
-			this.clickCount=0
-		}else if(event.button==2){
-			if(!gURLBar.plain){
+			this.clickCount = 0
+		} else if (event.button == 2) {
+			if (!gURLBar.plain) {
 				gURLBar.layerManager.makePlain()
 				this.p.focus()
 			}
 			this.p.select()
-			if(event.button==2)
-				document.getAnonymousElementByAttribute(gURLBar.inputBox,'anonid','input-box-contextmenu').openPopup(null,1,event.clientX+1,event.clientY+1,true,true)
-		}else if(event.button==1){
-			openDialog('chrome://smarttext/content/options.xul','','centerscreen')
+			if (event.button == 2)
+				document.getAnonymousElementByAttribute(gURLBar.inputBox, 'anonid', 'input-box-contextmenu').openPopup(null, 1, event.clientX + 1, event.clientY + 1, true, true)
+		} else if (event.button == 1) {
+			openDialog('chrome://smarttext/content/options.xul', '', 'centerscreen')
 		}
 	},
 
-	incrementClickCounter: function(reset){
+	incrementClickCounter: function(reset) {
 		clearTimeout(this.clickCountTimer);
-		if(reset){
-			this.clickCount=0
+		if (reset) {
+			this.clickCount = 0
 			return
 		}
-		var self=this;
-		this.clickCountTimer= setTimeout(function(){
-			self.clickCount=0
-		}, this.DBL_CLICK_SPEED+100*Math.min(this.clickCount,3))
+		var self = this;
+		this.clickCountTimer = setTimeout(function() {
+			self.clickCount = 0
+		}, this.DBL_CLICK_SPEED + 100 * Math.min(this.clickCount, 3))
 		this.clickCount++
 	},
 
-	handleEvent: function (event) {
-	  switch (event.type) {
+	handleEvent: function(event) {
+		switch (event.type) {
 		case "mousedown":
-			if(event.button!=0){
+			if (event.button != 0) {
 				this.incrementClickCounter('reset')
 				return;
 			}
-			var p=this.p,l=p.value.length,e=event.rangeOffset;
+			var p = this.p,
+				l = p.value.length,
+				e = event.rangeOffset;
 
 			this.incrementClickCounter()
 
-			var curpos=event.clientX+" "+event.clientY
-			if(e==l&&(this.clickCount!==1||curpos==this.lastPos)){
-				if(event.detail>1)this.stopEvent(event)
-				if(p.selectionStart==l&&p.selectionEnd==l){
-					p.selectionStart=0
-					this.ecbc=1
-				}else if(p.selectionStart==0&&p.selectionEnd==l){
-					p.selectionStart=e
-					this.ecbc=2
+			var curpos = event.clientX + " " + event.clientY
+			if (e == l && (this.clickCount !== 1 || curpos == this.lastPos)) {
+				if (event.detail > 1) this.stopEvent(event)
+				if (p.selectionStart == l && p.selectionEnd == l) {
+					p.selectionStart = 0
+					this.ecbc = 1
+				} else if (p.selectionStart == 0 && p.selectionEnd == l) {
+					p.selectionStart = e
+					this.ecbc = 2
 				}
-			}else if(this.clickCount === 1){
-			   if(event.detail>1){
-					p.selectionStart=p.selectionEnd=e
+			} else if (this.clickCount === 1) {
+				if (event.detail > 1) {
+					p.selectionStart = p.selectionEnd = e
 					this.stopEvent(event)
-			   }
-			}else if(p.selectionStart==0&&p.selectionEnd==l){
-				this.clickCount=0
-				p.selectionStart=p.selectionEnd=e
+				}
+			} else if (p.selectionStart == 0 && p.selectionEnd == l) {
+				this.clickCount = 0
+				p.selectionStart = p.selectionEnd = e
 				// this.ecbc=true
 				this.stopEvent(event)
-			}else{
-				if(this.clickCount === 3&&e==l)
+			} else {
+				if (this.clickCount === 3 && e == l)
 					p.select();
 				else
 					this.extend(p.selectionStart,p.selectionEnd)
 				this.stopEvent(event)
 			}
-			this.lastPos=curpos
+			this.lastPos = curpos
 			break;
 		case "mouseup":
 			//handle clicking at end
-			if(event.button==0&&this.ecbc){
-				this.p.selectionStart=(this.ecbc==1?0:event.rangeOffset)
-				this.ecbc=false
-				this.clickCount=0
+			if (event.button == 0 && this.ecbc) {
+				this.p.selectionStart = (this.ecbc == 1 ? 0 : event.rangeOffset)
+				this.ecbc = false
+				this.clickCount = 0
 			}
 			break;
 		}
 	},
 
-	selectAll: function (event) {
+	selectAll: function(event) {
 		this.p.select()
 	},
 
-	DBL_CLICK_SPEED:400,
-	clickCount : 0,
-	clickCountTimer : null,
+	DBL_CLICK_SPEED: 400,
+	clickCount: 0,
+	clickCountTimer: null,
 
-	selectGroup:function(index){
-		var url=this.p.value
-		var i1= url.indexOf("://")
-		var i2= url.indexOf("/",i1+3)
-		var i3= url.indexOf("?",i2+1)
-		if(i3<0)
-			i3=url.length
-		var i4= url.indexOf("#",i2+1)
-		if(i4<0)
-			i4=url.length
+	selectGroup: function(index) {
+		var url = this.p.value
+		var i1 = url.indexOf("://")
+		var i2 = url.indexOf("/", i1 + 3)
+		var i3 = url.indexOf("?", i2 + 1)
+		if (i3 < 0)
+			i3 = url.length
+		var i4 = url.indexOf("#", i2 + 1)
+		if (i4 < 0)
+			i4 = url.length
 
-		if(index<i1){
+		if (index < i1) {
 			this.p.setSelectionRange(0, i1);
-		}else if(index<i2){
+		} else if (index < i2) {
 			this.p.setSelectionRange(i1, i2);
-		}else if(index<i3){
+		} else if (index < i3) {
 			this.p.setSelectionRange(i2, i3);
-		}else if(index<i4){
+		} else if (index < i4) {
 			this.p.setSelectionRange(i3, i4);
 		}
 	},
 
-	extend: function (s, e) {
-		var c="";
+	extend: function(s, e) {
+		var c = "";
 		var p = this.p.value;
-		var index = (function (c, i) "_-: .=/&?#".indexOf(p.charAt(c), i));
+		var index = (function(c, i)"_-: .=/&?#".indexOf(p.charAt(c), i));
 		var bound = Math.min(index(s - 1) || 100, index(e) || 100) + 1;
 
 		end = e;
@@ -1076,7 +1075,7 @@
 			++end;
 			c = p.charAt(end);
 		}
-		end;
+
 		start = s - 1;
 		while (index(start, bound) < 0) {
 			--start;
@@ -1090,17 +1089,26 @@
 
 <field name="layerManager"><![CDATA[({
 	bar:this,
-	inputLayer: this.inputField.parentNode,
 	smartLayer: this.stsegmentLayer,
 	inputElement: this.inputField,
-
 	containerElement: this.stsegmentLayer.parentNode,
+	
+	get scrollLeft() {
+		return -(this.smartLayer.left||0)
+	},
+	set scrollLeft(val) {
+		
+		this.containerElement.clientWidth
+				
+
+	},
+
 	init: function(){
 	},
 	makePretty: function(){
 		this.smartLayer.style.display=""
 
-		var pstyle=this.inputLayer.firstChild.style
+		var pstyle=this.inputElement.style
 		pstyle.maxWidth=
 		pstyle.opacity="0"
 
@@ -1111,12 +1119,12 @@
 		var scrollLeft=this.smartLayer.scrollLeft
 		this.smartLayer.style.display="none"
 
-		var pstyle=this.inputLayer.firstChild.style
+		var pstyle=this.inputElement.style
 		pstyle.maxWidth=
 		pstyle.opacity=""
 		//pstyle.visibility=""
 
-		this.inputElement.editor.rootElement.scrollLeft = scrollLeft;
+		this.inputElement.editor.rootElement.scrollLeft = this.scrollLeft;
 		gURLBar.plain=true
 	},
 	synch: function(val){
@@ -1143,7 +1151,7 @@
 		return true;
 	},
 	handleEvent: function(e){
-		
+
 	}
 })]]></field>
 
