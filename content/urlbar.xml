@@ -756,7 +756,7 @@
 				else
 					this.moveSelectionToInputField();
 			}else if(cls.contains("protocol")){
-				if(!state)
+				if(state == "bottom")
 					this.selectFromElement(e.originalTarget)
 				else
 					this.showProtocolSuggestions(e.originalTarget)
@@ -1178,6 +1178,8 @@
 			} else {
 				if (y > r.top + 3/5*r.height) {
 					this.mode = "top"
+				} else {
+					this.mode = "bottom"
 				}
 			}
 		}

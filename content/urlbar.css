@@ -44,11 +44,14 @@ stsegment.smart-text-end{
 .top>.smart-text-inner>stsegment:not(.marked):hover{
 	text-decoration: underline!important;
 }
-.smart-text.top{
+.urlbar-input-box.top{
 	cursor:pointer;
 }
-.smart-text-input.top{
-	cursor:alias;
+.urlbar-input-box.left{
+	cursor:vertical-text;
+}
+.urlbar-input-box.bottom{
+	cursor:text;
 }
 
 /**==colors==**/
@@ -73,8 +76,8 @@ stsegment.basedomain{
 	text-shadow:-1px -1px 2px;
 	color:blue
 }
-.smart-text.left:hover{
-	color: darkblue!important;
+.smart-text.left:hover stsegment{
+	color: rgba(100,100,150,0.8)!important;
 }
 stsegment.selected{
 	color: HighlightText!important;
@@ -90,6 +93,7 @@ stlink{
 	display:block;
 	border-radius: 2px;
 	margin:1px 2px;
+	cursor:pointer;
 }
 stlink[odd]{
 	background-color: #FAFAFA;
@@ -97,7 +101,6 @@ stlink[odd]{
 stlink:hover{
 	text-decoration: underline!important;
 	color:darkblue;
-	cursor:pointer;
 	/background-color: #80BB4D;
 	/background-color: #6B8BC6;
 	background-color: lightblue;
