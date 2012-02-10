@@ -199,10 +199,11 @@
 	elemCount:0,
 	tokenList:[],
 	setInnerHTML: function(tokenList){
+		this.currentTokenList = tokenList || this.tokenList
 		var div = document.createElementNS('http://www.w3.org/1999/xhtml','div')
 		div.className = 'smart-text-inner'
 		var html = []
-		;(tokenList||this.tokenList).forEach(function(x){
+		this.currentTokenList.forEach(function(x){
 			html.push(
 				'<stsegment class="', x.class, '" index="', x.index, '">',
 					x.text.replace(/[<&]/g, function(str) {return str == "&" ? "&amp;" : "&lt;";}),
@@ -229,7 +230,8 @@
 			newList.push({
 				text: fr,
 				index: pt.index,
-				class: clazz
+				class: clazz,
+				startPos: pt.startPos + (a||0)
 			})
 		}
 		var newList = [], i=0, pt = this.tokenList[i], lastPos=0, st1, en1
@@ -288,7 +290,8 @@
 			index: this.elemCount,
 			text: text,
 			class: className,
-			endPos: ip
+			endPos: ip,
+			startPos: is
 		})
 		this.elemCount++;
 		this.inds.push(ip)
@@ -346,8 +349,11 @@
 		this.domainEnd=i2
 	//look for query
 		var i3= url.indexOf("?",i2+1)
-		if(i3<0)
-			i3=url.length
+		if(i3<0){
+			i3= url.indexOf("#",i2+1)
+			if(i3<0)
+				i3=url.length
+		}
 	//fill path
 		var ip1=ip2=i2;
 		while(ip2<i3){
@@ -377,13 +383,6 @@
 			this.createElem("index",i4,url.length);
 		}
 
-	//append flex at end
-		this.tokenList.push({
-			index: ++this.elemCount,
-			text: '',
-			class: "smart-text-end",
-			startPos: url.length
-		})
 		this.setInnerHTML()
 	//keep scrolled element visible
 		var pn=this.container
@@ -396,13 +395,7 @@
 		this.clear();
 		this.url=url
 		this.createElem("empty",0,this.url.length);
-	//append flex at end
-		this.tokenList.push({
-			index: ++this.elemCount,
-			text: '',
-			class: "smart-text-end",
-			startPos: url.length
-		})
+
 		this.setInnerHTML()
 	//keep scrolled element visible
 		var pn=this.container
@@ -750,7 +743,7 @@
 			var cls=e.originalTarget.classList
 			if(isSel || (cls.contains('empty')&&state!='left')){
 				this.selectFromRange();
-			}else if(state=='left' || cls.contains("smart-text-end")){
+			}else if(state=='left'){
 				if(e.button==1)
 					this.showProtocolSuggestions(e.originalTarget)
 				else
@@ -779,7 +772,8 @@
 
 		var onMouseMove = function(e){
 			x = e.clientX, y = e.clientY
-			var newFocus = self.offsetFromStart(e.rangeParent, e.rangeOffset)
+			var [o1, o2] = self.getPointOffsets(self.container.firstElementChild, x)
+			var newFocus = self.offsetFromStart(o1, o2)
 
 			var xR=Math.abs(cursorRect.l-x)<10
 			if(self.anchorOffset == newFocus && (y < visibleRect[xR?'m':'t']  || y > visibleRect.b)  ){
@@ -829,14 +823,16 @@
 
 
 		this.state = gURLBar.layerManager.mode
-		this.anchorOffset = this.focusOffset = this.offsetFromStart(e.rangeParent, e.rangeOffset)
+		var [o1, o2, cursorRect] = this.getPointOffsets(this.container.firstElementChild, e.clientX)
+		this.anchorOffset = this.focusOffset = this.offsetFromStart(o1, o2)
 
 
 		if(!this.cursor){
 			this.cursor = this.container.parentNode.appendChild(document.createElement('stcursor'))
 			this.cursor.style.cssText = 'border:1px solid;display:none;position:fixed;z-index:-1;pointer-events:none'
 		}
-		var visibleRect = this.container.getBoundingClientRect(), cursorRect = this.getEventPoint(e, this.anchorOffset)
+		var visibleRect = this.container.getBoundingClientRect()
+
 		visibleRect = {
 			m: visibleRect.top + visibleRect.height * 0.4,
 			h: visibleRect.height,
@@ -864,70 +860,49 @@
 			
 		this.state=='left'||onMouseMove(e)
 	},
-
-	getEventPoint: function(e, startOffset){
-		var node = e.rangeParent, offset = e.rangeOffset
-		if(node.nodeType != 3) try{
-			var i = this.inds.indexOf(startOffset)-1
-			if(i>0){
-				node = this.container.firstChild.children[i].firstChild
-				offset = node.length
-			}else{
-				node = this.container.firstChild.children[0].firstChild
-				offset = 0
+	
+	getPointOffsets: function(parent, x) {
+		var r = document.createRange()    
+		function getRect(el, offset) {
+			r.setStart(el, offset)
+			r.setEnd(el, offset + 1)
+			return r.getBoundingClientRect()
+		}
+		
+		function binS(el){
+			var ch = el.nodeType == 3 ? el.data : el.childNodes
+			var hi = ch.length, low = 0    
+			while (hi - low >= 1) {
+				var mid = (hi + low) >> 1
+				var rect = getRect(el, mid)
+				if (x < rect.left) {
+					hi = mid
+				} else if (x > rect.right) {
+					low = mid + 1
+				} else {
+					return mid
+				}
 			}
-		}catch(e){return {left:0, height:0}}
-
-		var range = document.createRange();
-
-		range.setStart(node, offset)
-		range.setEnd(node, offset)
-		var b1 = range.getBoundingClientRect()
-		range.detach()
-
-		return {l:b1.left, h:b1.height, b:b1.bottom}
+			return mid
+		}
+		var i = binS(parent)
+		var node = parent.childNodes[i].firstChild
+		var j = binS(node)
+		
+		r.setStart(node, j)
+		r.setEnd(node, j)
+		var b1 = r.getBoundingClientRect()
+				
+		r.detach()
+		dump(i, j)
+		return [i, j, {l:b1.left, h:b1.height, b:b1.bottom}]
 	},
 
 
-	offsetFromStart: function(node, offset) {
-		function getLength(node){
-			if(!node)
-				return 0;
-			if(node.nodeType == 3 )
-				return node.length
-			var ch=node.childNodes
-			if(!ch)
-				return 0;
-			var l=0,n=ch.length, i=0
-			for(i=0;i<n;i++)
-				l+=getLength(ch[i])
-			return l
-		}
-		function getLength2(node, offset){
-			if(!node || !offset)
-				return 0;
-			if(node.nodeType == 3 )
-				return offset
-			var ch = node.childNodes
-			if(!ch)
-				return 0;
-			var l=0,n=offset, i=0
-			for(i=0;i<n;i++)
-				l+=getLength(ch[i])
-			return l
-		}
-
-		var l = getLength2(node, offset)
-
-		while(node && node !== this.container){
-			var newNode = node.previousSibling
-			while(newNode){
-				l+=getLength(newNode)
-				newNode = newNode.previousSibling
-			}
-			node = node.parentNode;
-		}
-		return  l
+	offsetFromStart: function(o1, o2) {
+		var t = this.currentTokenList[o1]
+		var endPos = t ? t.startPos : 0
+		return  endPos + o2
 	}
 })]]> </field>
 
@@ -1192,7 +1167,7 @@
 			cl.remove(oldMode)
 			cl.add(this.mode)
 		}
-		
+		// window.XULBrowserWindow.setOverLink(this.linkText, null);
 	}
 })]]></field>
 
