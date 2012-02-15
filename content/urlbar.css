@@ -76,7 +76,7 @@ stsegment.basedomain{
 	text-shadow:-1px -1px 2px;
 	color:blue
 }
-.smart-text.left:hover stsegment{
+.smart-text.left:hover stsegment:not(.marked){
 	color: rgba(100,100,150,0.8)!important;
 }
 stsegment.selected{

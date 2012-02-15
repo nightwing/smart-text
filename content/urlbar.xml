@@ -770,6 +770,8 @@
 
 		var onMouseMove = function(e){
 			x = e.clientX, y = e.clientY
+		}
+		var onMouseMoveInterval = function(e){
 			var [o1, o2] = self.getPointOffsets(self.container.firstElementChild, x)
 			var newFocus = self.offsetFromStart(o1, o2)
 
@@ -794,12 +796,12 @@
 		}
 
 		var onScrollInterval = function(){
-			if(x < visibleRect.l && visibleRect.scrollL > 0){
-				var delta = x - visibleRect.l
+			if(x < visibleRect.l + 4 && visibleRect.scrollL > 0){
+				var delta = x - visibleRect.l - 8
 				if(visibleRect.scrollL + delta < 0)
 					delta = -visibleRect.scrollL
-			}else if(x > visibleRect.r && visibleRect.scrollL < visibleRect.scrollW){
-				var delta = x - visibleRect.r
+			}else if(x > visibleRect.r - 4 && visibleRect.scrollL < visibleRect.scrollW){
+				var delta = x - visibleRect.r + 4
 				if(visibleRect.scrollL + delta > visibleRect.scrollW)
 					delta = visibleRect.scrollW - visibleRect.scrollL
 			}else
@@ -807,6 +809,7 @@
 
 			cursorRect.l -=delta
 			visibleRect.scrollL += delta
+			dump(gURLBar.layerManager.scrollLeft, visibleRect.scrollL)
 			gURLBar.layerManager.scrollLeft = visibleRect.scrollL
 		}
 
@@ -814,6 +817,7 @@
 			window.removeEventListener("mousemove", onMouseMove, true);
 			window.removeEventListener("mouseup", onMouseUp, true);
 			clearInterval(timerId);
+			clearInterval(mainTimerId);
 			self.cursor.style.display = 'none'
 			self.container.className = initialClassName
 			self.onMouseUp(e, cursorMode)
@@ -829,8 +833,8 @@
 			this.cursor = this.container.parentNode.appendChild(document.createElement('stcursor'))
 			this.cursor.style.cssText = 'border:1px solid;display:none;position:fixed;z-index:-1;pointer-events:none'
 		}
-		var visibleRect = this.container.getBoundingClientRect()
-
+		var visibleRect = this.container.parentNode.getBoundingClientRect()
+dump(visibleRect.left,'*******************',this.container.className)
 		visibleRect = {
 			m: visibleRect.top + visibleRect.height * 0.4,
 			h: visibleRect.height,
@@ -839,7 +843,7 @@
 			r: visibleRect.right,
 			b: cursorRect.b,
 			w: visibleRect.width,
-			scrollW: this.container.screenWidth,
+			scrollW: gURLBar.layerManager.scrollWidth,
 			scrollL: gURLBar.layerManager.scrollLeft
 		}
 		if(!this.linkable)
@@ -852,6 +856,8 @@
 
 		if(visibleRect.scrollW >= visibleRect.w)
 			var timerId = setInterval(onScrollInterval, 40);
+		
+		var mainTimerId = setInterval(onMouseMoveInterval, 40);
 			
 		//if(this.fixGURLBarPaddingClick)
 		//	this.state='left'
@@ -1093,6 +1099,9 @@
 	inputElement: this.inputField,
 	containerElement: this.stsegmentLayer.parentNode,
 	
+	get scrollWidth() {
+		return (this.smartLayer.clientWidth||0)
+	},
 	get scrollLeft() {
 		return -(this.smartLayer.left||0)
 	},
