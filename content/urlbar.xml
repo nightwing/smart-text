@@ -219,6 +219,7 @@
 
 	getMarkedTokenList: function(st, en){
 		function sub(pt, sel, a, b){
+			if(!pt) return
 			var fr = pt.text.substring(a,b)
 			var clazz = pt.class + ' marked'
 
@@ -386,8 +387,8 @@
 		this.setInnerHTML()
 	//keep scrolled element visible
 		var pn=this.container
-		if(pn.scrollLeft+pn.clientWidth > pn.scrollWidth)
-			pn.scrollLeft = pn.scrollWidth
+		if(gURLBar.layerManager.scrollLeft+pn.clientWidth > pn.scrollWidth)
+			gURLBar.layerManager.scrollLeft = pn.scrollWidth
 		this.linkable=true
 	},
 	simpleSynch: function(url){
@@ -399,8 +400,8 @@
 		this.setInnerHTML()
 	//keep scrolled element visible
 		var pn=this.container
-		if(pn.scrollLeft+pn.clientWidth > pn.scrollWidth)
-			pn.scrollLeft = pn.scrollWidth
+		if(gURLBar.layerManager.scrollLeft+pn.clientWidth > pn.scrollWidth)
+			gURLBar.layerManager.scrollLeft = pn.scrollWidth
 		this.linkable=false
 	},
 	emptySynch: function(){
@@ -429,7 +430,7 @@
 				this.editor.rootElement.scrollLeft+=(e.detail>0?1:-1)*15
 		}, true);
 
-		this.container.addEventListener("DOMMouseScroll", function(e){
+		this.container.parentNode.addEventListener("DOMMouseScroll", function(e){
 			if(e.ctrlKey){
 				if(this.scroll){
 					this.scroll=false
@@ -437,12 +438,9 @@
 				}else
 					this.scroll=true
 				e.preventDefault();e.stopPropagation()
-			}else
-				this.left-=(e.detail>0?1:-1)*15
-				if(this.left>0)
-					this.left=0
-				else if(this.left<-this.parentNode.offsetWidth)
-					this.left=-this.parentNode.offsetWidth
+			}else{
+				gURLBar.layerManager.scrollLeft+=(e.detail>0?1:-1)*15
+			}
 		}, true);
 
 		this.container.addEventListener("mousedown", this, true);
@@ -809,7 +807,7 @@
 
 			cursorRect.l -=delta
 			visibleRect.scrollL += delta
-			self.container.scrollLeft = visibleRect.scrollL
+			gURLBar.layerManager.scrollLeft = visibleRect.scrollL
 		}
 
 		var onMouseUp = function(){
@@ -841,8 +839,8 @@
 			r: visibleRect.right,
 			b: cursorRect.b,
 			w: visibleRect.width,
-			scrollW: this.container.scrollWidth,
-			scrollL: this.container.scrollLeft
+			scrollW: this.container.screenWidth,
+			scrollL: gURLBar.layerManager.scrollLeft
 		}
 		if(!this.linkable)
 			visibleRect.m = visibleRect.b+10 // non uris are always selectable
@@ -862,19 +860,19 @@
 	},
 	
 	getPointOffsets: function(parent, x) {
-		var r = document.createRange()    
+    	var r = document.createRange()    
 		function getRect(el, offset) {
 			r.setStart(el, offset)
 			r.setEnd(el, offset + 1)
 			return r.getBoundingClientRect()
 		}
 		
-		function binS(el){
-			var ch = el.nodeType == 3 ? el.data : el.childNodes
-			var hi = ch.length, low = 0    
-			while (hi - low >= 1) {
-				var mid = (hi + low) >> 1
-				var rect = getRect(el, mid)
+		var mid, rect
+		function binS(el, hi){
+			var low = 0    
+			while (hi > low) {
+				mid = (hi + low) >> 1
+				rect = getRect(el, mid)
 				if (x < rect.left) {
 					hi = mid
 				} else if (x > rect.right) {
@@ -883,19 +881,31 @@
 					return mid
 				}
 			}
+            
 			return mid
 		}
-		var i = binS(parent)
-		var node = parent.childNodes[i].firstChild
-		var j = binS(node)
+        function binST(el){
+			var hi = el.data.length, low = 0
+            for(var mid = 0; mid < hi; mid++){
+                var rect = getRect(el, mid)
+                var x1 = rect.left+rect.width/2
+                if (x <= x1)
+                    return mid
+            }
+			return mid
+		}
 		
-		r.setStart(node, j)
-		r.setEnd(node, j)
-		var b1 = r.getBoundingClientRect()
-				
+		var ch = parent.childNodes
+		var i = binS(parent, ch.length)
+		var node = ch[i].firstChild
+		var j = binS(node, node.data.length)
+							
 		r.detach()
-		dump(i, j)
-		return [i, j, {l:b1.left, h:b1.height, b:b1.bottom}]
+		
+		if (x < rect.left + rect.width/2) 
+			return [i, j, {l:rect.left, h:rect.height, b:rect.bottom}]
+		else
+			return [i, j+1, {l:rect.right, h:rect.height, b:rect.bottom}]
 	},
 
 
@@ -1087,10 +1097,17 @@
 		return -(this.smartLayer.left||0)
 	},
 	set scrollLeft(val) {
-		
-		this.containerElement.clientWidth
-				
-
+		dump(val, this.smartLayer.clientWidth - this.containerElement.clientWidth + 20)
+		if (val <= 0){
+			val = 0
+		} else {
+			var max = this.smartLayer.clientWidth - this.containerElement.clientWidth
+			if (max <= 0)
+				val = 0
+			else if (val > max + 20)
+				val = max + 20
+		}
+		this.smartLayer.left = -val
 	},
 
 	init: function(){
@@ -1103,7 +1120,7 @@
 		pstyle.maxWidth=
 		pstyle.opacity="0"
 
-		this.smartLayer.scrollLeft = this.inputElement.editor.rootElement.scrollLeft;
+		this.scrollLeft = this.inputElement.editor.rootElement.scrollLeft;
 		gURLBar.plain=false;
 	},
 	makePlain: function(){
