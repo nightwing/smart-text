@@ -2,11 +2,11 @@
 
 /**==?s4e=null==**/
 #urlbar {
-	-moz-binding: url("chrome://smarttext/content/urlbar.xml#urlbar") !important;
+	-moz-binding: url("chrome://smarttext/content/urlbar.xml?$version$#urlbar") !important;
 }
 /**==?s4e==**/
 #urlbar {
-	-moz-binding: url("chrome://smarttext/content/s4e.xml#urlbar") !important;
+	-moz-binding: url("chrome://smarttext/content/s4e.xml?$version$#urlbar") !important;
 }
 .st-layers:hover >.urlbar-over-link-box, 
 .urlbar-over-link-box:not([overlinkstate]){

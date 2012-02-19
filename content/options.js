@@ -1,6 +1,7 @@
-(function(){
+(function(version){
 /******************************************************************/
 
+/******************************************************************/
 var Cc = Components.classes;
 var Ci = Components.interfaces;
 var Cu = Components.utils;
@@ -53,7 +54,7 @@ function createStyleFile(){
 }
 
 /******************************************************************/
-var OP_COM='/**==',CL_COM='==**/',A_COM=OP_COM+'[]'+CL_COM
+var OP_COM='/**==', CL_COM='==**/', A_COM=OP_COM+'[]'+CL_COM
 function getUserOptions(){
 	try{
 		var css = makeReq(cssFileURI.spec)
@@ -88,6 +89,7 @@ function prepareCss(){
 	cssFragments.shift()
 
 	options = options || extend(defaultOptions, getUserOptions()) || {}
+	options.version = defaultOptions.version = version
 
 	cssFragmentMap=[]
 	for(var i in cssFragments){
@@ -159,22 +161,20 @@ function recomputeLineHeightFromUI(options,aWin){
 }
 
 /******************************************************************/
-prepareCss()
 if(window.location.href.indexOf(contentRoot)==-1){
 	//createStyleFile(cssFile)
-	var onLoad=function(){
-		window.removeEventListener('load',onLoad,false)
+	return function(v){
+		version = v
+		prepareCss()
 		var text = compileCss(options)
 		writeToFile(cssFile, text)
 		//for status4evar
 		clearInterval(gURLBar._overLinkInterval);
 		updateStyle(true)
 	}
-	window.addEventListener('load',onLoad,false)
-	if(document.readyState=='complete')
-		onLoad()
-		
 }else{
+	version = Services.prefs.getIntPref("extensions.smart-text.version")
+	prepareCss()
 	window.options = options
 	window.cssFragmentMap = cssFragmentMap
 	window.defaultOptions = defaultOptions
@@ -193,4 +193,4 @@ if(window.location.href.indexOf(contentRoot)==-1){
 	window.cssFile = cssFile
 	window.extend = extend
 }
-})()
+})();

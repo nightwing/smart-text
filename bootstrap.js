@@ -24,12 +24,11 @@ var Cu = Components.utils;
 Components.utils.import("resource://gre/modules/Services.jsm");
 
 
-function getCssFile(){
+function getCssFile() {
 	var file = Services.dirsvc.get("ProfD", Ci.nsIFile);
 	file.append('smart-text-style.css')
 	return file
 }
-
 
 function updateStyle(register, file){
 	var sss = Cc["@mozilla.org/content/style-sheet-service;1"].getService(Ci.nsIStyleSheetService)
@@ -44,44 +43,44 @@ function updateStyle(register, file){
 
 //
 loadIntoWindow = function(mWindow) {
-	Services.scriptloader.loadSubScript( __SCRIPT_URI_SPEC__+'/../content/options.js', mWindow);
+	version = 2
+	Components.utils.reportError(1)
+	var prefName = "extensions.smart-text.version"
+	var v = Services.prefs.prefHasUserValue(prefName) ? Services.prefs.getIntPref(prefName) : 0
+	if (v == version)
+		return
+		
+	var f = Services.scriptloader.loadSubScript( __SCRIPT_URI_SPEC__+'/../content/options.js', mWindow);	
+	f(version)
+	Services.prefs.setIntPref(prefName, version)
 }
 
 
 WindowListener={
-	onOpenWindow: function(win){
-		win = win.QueryInterface(Ci.nsIInterfaceRequestor).getInterface(Ci.nsIDOMWindow).window;
-		dump("::::::::::::::::::---")
-		dump(win) &&
-		dump(win.document) &&
-		dump(win.document.documentElement) &&
-		dump(win.document.documentElement.getAttribute("windowtype"))
-		let wm = Services.wm
-		// Wait for the window to finish loading
-		win.addEventListener("load", function onLoad() {
-			dump("INSIDE---")
-			win.removeEventListener("load", onLoad, false);
-			if (win.document.documentElement.getAttribute("windowtype")!='navigator:browser')
-				return;
-			if (WindowListener.loaded)
-				return
-			wm.removeListener(WindowListener);			
-			loadIntoWindow(win)
-			WindowListener.loaded = true
-		}, false);
+	observe: function windowWatcher(win, topic) {
+		if (topic == "domwindowopened") {
+			win.addEventListener("load", function onLoad() {
+				win.removeEventListener("load", onLoad, false);
+				if (this.active && win.location.href == 'chrome://browser/content/browser.xul')
+					WindowListener.loadIntoWindow(win)
+			}, false);
+		}
 	},
-	onCloseWindow: function(win){ },
-	onWindowTitleChange: function(win, aTitle){ },
+	loadIntoWindow: function(win){
+		Services.ww.unregisterNotification(this.observe)
+		loadIntoWindow(win)
+	},
 	waitForFirst: function(){
-		let wm = Services.wm
-		let win = wm.getMostRecentWindow("navigator:browser");
-		
+		var win = Services.wm.getMostRecentWindow("navigator:browser");
 		if (win)
 			loadIntoWindow(win)
 		else
-			wm.addListener(WindowListener);
-	
-		dump(win)
+			Services.ww.registerNotification(this.observe)
+		this.active = true
+	},
+	unregister: function(){
+		Services.ww.unregisterNotification(this.observe)
+		this.active = false
 	}
 }
 
@@ -96,14 +95,16 @@ function startup(aData, aReason) {
 	var file = getCssFile()
 	if (file.exists())
 		updateStyle(true, file)
-	else
-		WindowListener.waitForFirst()
+	
+	WindowListener.waitForFirst()
 }
 
 function shutdown(aData, aReason) {
 	if (aReason == APP_SHUTDOWN)
 		return;
-
+	WindowListener.unregister()
+	updateStyle(false, getCssFile())
+	
 	let wm = Services.wm
 	// close option windows if any
 	let enumerator = wm.getEnumerator("");
@@ -112,12 +113,6 @@ function shutdown(aData, aReason) {
 		if(win.location.href.indexOf('chrome://smarttext/content/')==0)
 			win.close()
 	}
-
-
-	wm.removeListener(WindowListener);
-
-	updateStyle(false, getCssFile())
-
 	if (Services.vc.compare(Services.appinfo.platformVersion, "10.0") < 0)
 		Components.manager.QueryInterface(Ci.nsIComponentRegistrar)
 					.removeBootstrappedManifestLocation(aData.installPath)
