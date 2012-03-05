@@ -30,7 +30,7 @@
 								xbl:inherits="tooltiptext=inputtooltiptext,onfocus,onblur,value,type,maxlength,disabled,size,readonly,userAction"
 						/>
 						<xul:hbox anonid="stsegment-layer" class="smart-text" style="display:none;" 
-											ondragover="gURLBar.layerManager.makePlain()"
+											ondragover="gURLBar.selectionManager.makePlain()"
 											ondragexit="nsDragAndDrop.dragExit(event, gURLBar);" />
 					</xul:hbox>
 					<xul:box anonid="overflow-ellipsis" class="smart-text-ellipsis"
@@ -52,19 +52,19 @@
 
 <implementation implements=" nsIObserver">
     <constructor><![CDATA[  //nsIDOMEventListener,
-		var p = this.parentNode
-		if (p.stMouseDown)
-			p.removeEventListener('mousedown',p.stMouseDown,true)
-		p.addEventListener('mousedown', p.stMouseDown = this.fixGURLBarPaddingClick, true)
+		var inputField = this.parentNode
+		if (inputField.stMouseDown)
+			inputField.removeEventListener('mousedown',inputField.stMouseDown,true)
+		inputField.addEventListener('mousedown', inputField.stMouseDown = this.fixGURLBarPaddingClick, true)
 
 		this.__noSuchMethod__=dump
 		this.selectionManager.init()
 		this.inputclicks.init()
-		this.layerManager.init()
+		this.selectionManager.init()
 		this.clickSelectsAll=false
 
-		if(this.layerManager.synch(this.inputField.value))
-			this.layerManager.makePretty()
+		if(this.selectionManager.synch(this.inputField.value))
+			this.selectionManager.makePretty()
         this.inputField.removeEventListener("mousemove", this, false);
         this.plain = false;
 		// fix popup behaviour
@@ -100,9 +100,9 @@
 			this.inputField.value = val;
 			this.mIgnoreInput = false;
 			if(!this._focused){
-				this.layerManager.synch(val)
+				this.selectionManager.synch(val)
 				if(this.plain)
-					this.layerManager.makePretty()
+					this.selectionManager.makePretty()
 			}
 			/*var event = document.createEvent("Events");
 			event.initEvent("ValueChange", true, true);
@@ -197,7 +197,6 @@
 ]]></body></method>
 
 <field name="selectionManager"><![CDATA[({
-	container : this.stsegmentLayer,
 	elemCount:0,
 	tokenList:[],
 	setInnerHTML: function(tokenList){
@@ -213,7 +212,7 @@
 			)
 		})
 		div.innerHTML = html.join('')
-		var el=this.container
+		var el=this.stsegmentLayer
 		while (el.hasChildNodes())
 			el.removeChild(el.lastChild);
 		el.appendChild(div)
@@ -279,10 +278,10 @@
 		return newList;
 	},
 
-	createElem:function(className,is,ip){
+	createElem: function(className,is,ip){
 		if(ip<=is)
 			return
-		var text=this.url.substring(is,ip)
+		var text = this.url.substring(is,ip)
 		if(!text)
 			return
 		if(className=="subdomain"&&text=='www.')
@@ -305,7 +304,7 @@
 		this.tokenList=[]
 	},
 
-	synch: function(uri,url){
+	setURL: function(uri,url){
 		this.clear();
 		this.url=url;
 		var i1
@@ -388,36 +387,29 @@
 
 		this.setInnerHTML()
 	//keep scrolled element visible
-		var pn=this.container
-		if(gURLBar.layerManager.scrollLeft+pn.clientWidth > pn.scrollWidth)
-			gURLBar.layerManager.scrollLeft = pn.scrollWidth
+		var pn=this.stsegmentLayer
+		if(gURLBar.selectionManager.scrollLeft+pn.clientWidth > pn.scrollWidth)
+			gURLBar.selectionManager.scrollLeft = pn.scrollWidth
 		this.linkable=true
 	},
-	simpleSynch: function(url){
+	setSimpleValue: function(url){
 		this.inds=[0];
 		this.clear();
-		this.url=url
-		this.createElem("empty",0,this.url.length);
+		this.url = url || gURLBar.getAttribute('placeholder')
+		this.createElem("empty", 0, this.url.length);
 
 		this.setInnerHTML()
 	//keep scrolled element visible
-		var pn=this.container
-		if(gURLBar.layerManager.scrollLeft+pn.clientWidth > pn.scrollWidth)
-			gURLBar.layerManager.scrollLeft = pn.scrollWidth
+		var pn = this.stsegmentLayer
+		if (gURLBar.selectionManager.scrollLeft+pn.clientWidth > pn.scrollWidth)
+			gURLBar.selectionManager.scrollLeft = pn.scrollWidth
 		this.linkable=false
 	},
-	emptySynch: function(){
-		this.inds=[0];
-		this.clear();
-		this.url=gURLBar.emptyText||gURLBar.getAttribute('placeholder')
-		this.createElem("empty",0,this.url.length);
-		this.setInnerHTML()
-	},
 
-	p: document.getAnonymousElementByAttribute(this, "anonid", "input"),
+	inputField: this.inputField,
 
 	init: function(){
-		this.p.addEventListener("DOMMouseScroll", function(e){
+		this.inputField.addEventListener("DOMMouseScroll", function(e){
 			if(e.ctrlKey){
 				if(this.scroll){
 					this.scroll=false
@@ -432,7 +424,7 @@
 				this.editor.rootElement.scrollLeft+=(e.detail>0?1:-1)*15
 		}, true);
 
-		this.container.parentNode.addEventListener("DOMMouseScroll", function(e){
+		this.stsegmentLayer.parentNode.addEventListener("DOMMouseScroll", function(e){
 			if(e.ctrlKey){
 				if(this.scroll){
 					this.scroll=false
@@ -441,11 +433,13 @@
 					this.scroll=true
 				e.preventDefault();e.stopPropagation()
 			}else{
-				gURLBar.layerManager.scrollLeft+=(e.detail>0?1:-1)*15
+				gURLBar.selectionManager.scrollLeft+=(e.detail>0?1:-1)*15
 			}
 		}, true);
 
-		this.container.addEventListener("mousedown", this, true);
+		
+		this.stsegmentLayer.addEventListener("mousedown", this.onMouseDown.bind(this), true);		
+		this.containerElement.addEventListener("mousemove", this, false)
 	},
 
 	scrollNumbers: function(text,offset,amount){
@@ -489,9 +483,9 @@
 		var len=newtext.length-text.length
 		var index=parseInt(e.rangeParent.parentNode.getAttribute('index'))
 		var inds=this.inds
-		text=this.p.value
+		text=this.inputField.value
 		text=text.substring(0,inds[index])+newtext+text.substr(inds[index+1])
-		this.url=this.p.value=text
+		this.url=this.inputField.value=text
 		this.tokenList[index].text = text
 		this.tokenList[index].endPos += len
 
@@ -614,7 +608,7 @@
 			el.setAttribute("anonid", "contextPopup")
 			//el.setAttribute("type", "autocomplete-richlistbox")
 			//el.setAttribute("ignorekeys", "true")
-			this.container.parentNode.appendChild(el)
+			this.stsegmentLayer.parentNode.appendChild(el)
 			el.setAttribute('onclick','gURLBar.selectionManager.onProtocolPopupClick(event)')
 			el.setAttribute('onkeypress','dump(event)')
 
@@ -716,12 +710,12 @@
 	},
 
 	moveSelectionToInputField: function(start,end){
-		gURLBar.layerManager.makePlain();
-		this.p.focus();
+		gURLBar.selectionManager.makePlain();
+		this.inputField.focus();
 
 		if(typeof start!=="number"||typeof end!=="number")
-			this.p.select()
-		else this.p.setSelectionRange(start,end)
+			this.inputField.select()
+		else this.inputField.setSelectionRange(start,end)
 	},
 
 	onMouseUp: function(e, cursorMode){
@@ -759,22 +753,22 @@
 		}
 	},
 
-	handleEvent: function(e){
+	onMouseDown: function(e){
 		e.preventDefault()
 		e.stopPropagation()
 
-		if(!this.p.value){
+		if(!this.inputField.value){
 			this.moveSelectionToInputField()
 			this.fixGURLBarPaddingClick=false
 			return
 		}
-		var self = this, x, y, cursorMode, startY = e.clientY, initialClassName = this.container.className
+		var self = this, x, y, cursorMode, startY = e.clientY, initialClassName = this.stsegmentLayer.className
 
 		var onMouseMove = function(e){
 			x = e.clientX, y = e.clientY
 		}
 		var onMouseMoveInterval = function(e){
-			var [o1, o2] = self.getPointOffsets(self.container.firstElementChild, x)
+			var [o1, o2] = self.getPointOffsets(self.stsegmentLayer.firstElementChild, x, 1)
 			var newFocus = self.offsetFromStart(o1, o2)
 
 			var xR=Math.abs(cursorRect.l-x)<10
@@ -783,12 +777,12 @@
 					self.cursor.style.display = '';
 					cursorMode = true;
 					self.cursor.style.left = cursorRect.l + 'px';
-					self.container.classList.remove('top')
+					self.stsegmentLayer.classList.remove('linkMode')
 				}
 			}else if(cursorMode){
 				self.cursor.style.display = 'none';
 				cursorMode = false
-				self.container.classList.add('top')
+				self.stsegmentLayer.classList.add('linkMode')
 			}
 
 			if(newFocus==self.focusOffset)
@@ -811,8 +805,8 @@
 
 			cursorRect.l -=delta
 			visibleRect.scrollL += delta
-			dump(gURLBar.layerManager.scrollLeft, visibleRect.scrollL)
-			gURLBar.layerManager.scrollLeft = visibleRect.scrollL
+			dump(gURLBar.selectionManager.scrollLeft, visibleRect.scrollL)
+			gURLBar.selectionManager.scrollLeft = visibleRect.scrollL
 		}
 
 		var onMouseUp = function(){
@@ -821,22 +815,23 @@
 			clearInterval(timerId);
 			clearInterval(mainTimerId);
 			self.cursor.style.display = 'none'
-			self.container.className = initialClassName
+			self.stsegmentLayer.className = initialClassName
+			self.selecting = false
 			self.onMouseUp(e, cursorMode)
 		}
 
 
-		this.state = gURLBar.layerManager.mode
-		var [o1, o2, cursorRect] = this.getPointOffsets(this.container.firstElementChild, e.clientX)
+		this.state = gURLBar.selectionManager.mode
+		var [o1, o2, cursorRect] = this.getPointOffsets(this.stsegmentLayer.firstElementChild, e.clientX, 2)
 		this.anchorOffset = this.focusOffset = this.offsetFromStart(o1, o2)
 
 
 		if(!this.cursor){
-			this.cursor = this.container.parentNode.appendChild(document.createElement('stcursor'))
+			this.cursor = this.stsegmentLayer.parentNode.appendChild(document.createElement('stcursor'))
 			this.cursor.style.cssText = 'border:1px solid;display:none;position:fixed;z-index:-1;pointer-events:none'
 		}
-		var visibleRect = this.container.parentNode.getBoundingClientRect()
-dump(visibleRect.left,'*******************',this.container.className)
+		var visibleRect = this.stsegmentLayer.parentNode.getBoundingClientRect()
+dump(visibleRect.left,'*******************',this.stsegmentLayer.className)
 		visibleRect = {
 			m: visibleRect.top + visibleRect.height * 0.4,
 			h: visibleRect.height,
@@ -845,14 +840,14 @@ dump(visibleRect.left,'*******************',this.container.className)
 			r: visibleRect.right,
 			b: cursorRect.b,
 			w: visibleRect.width,
-			scrollW: gURLBar.layerManager.scrollWidth,
-			scrollL: gURLBar.layerManager.scrollLeft
+			scrollW: gURLBar.selectionManager.scrollWidth,
+			scrollL: gURLBar.selectionManager.scrollLeft
 		}
 		if(!this.linkable)
 			visibleRect.m = visibleRect.b+10 // non uris are always selectable
 		this.cursor.style.height = (visibleRect.h)+'px'
 
-		this.container.setCapture(false)
+		this.stsegmentLayer.setCapture(false)
 		window.addEventListener("mouseup", onMouseUp, true);
 		window.addEventListener("mousemove", onMouseMove, true);
 
@@ -865,9 +860,11 @@ dump(visibleRect.left,'*******************',this.container.className)
 		//	this.state='left'
 			
 		this.state=='left'||onMouseMove(e)
+		
+		self.selecting = true
 	},
 	
-	getPointOffsets: function(parent, x) {
+	getPointOffsets: function(parent, x, detail) {
     	var r = document.createRange()    
 		function getRect(el, offset) {
 			r.setStart(el, offset)
@@ -892,28 +889,18 @@ dump(visibleRect.left,'*******************',this.container.className)
             
 			return mid
 		}
-        function binST(el){
-			var hi = el.data.length, low = 0
-            for(var mid = 0; mid < hi; mid++){
-                var rect = getRect(el, mid)
-                var x1 = rect.left+rect.width/2
-                if (x <= x1)
-                    return mid
-            }
-			return mid
-		}
 		
 		var ch = parent.childNodes
 		var i = binS(parent, ch.length)
 		var node = ch[i].firstChild
-		var j = binS(node, node.data.length)
-							
+		var j = detail-- && binS(node, node.data.length)
+
 		r.detach()
 		
 		if (x < rect.left + rect.width/2) 
-			return [i, j, {l:rect.left, h:rect.height, b:rect.bottom}]
+			return [i, j, detail && {l:rect.left, h:rect.height, b:rect.bottom}]
 		else
-			return [i, j+1, {l:rect.right, h:rect.height, b:rect.bottom}]
+			return [i, j+1, detail && {l:rect.right, h:rect.height, b:rect.bottom}]
 	},
 
 
@@ -921,7 +908,119 @@ dump(visibleRect.left,'*******************',this.container.className)
 		var t = this.currentTokenList[o1]
 		var endPos = t ? t.startPos : 0
 		return  endPos + o2
+	},
+	
+	
+	
+	bar:this,
+	stsegmentLayer: this.stsegmentLayer,
+	containerElement: this.stsegmentLayer.parentNode,
+	
+	get scrollWidth() {
+		return (this.stsegmentLayer.clientWidth||0)
+	},
+	get scrollLeft() {
+		return -(this.stsegmentLayer.left||0)
+	},
+	set scrollLeft(val) {
+		dump(val, this.stsegmentLayer.clientWidth - this.containerElement.clientWidth + 20)
+		if (val <= 0){
+			val = 0
+		} else {
+			var max = this.stsegmentLayer.clientWidth - this.containerElement.clientWidth
+			if (max <= 0)
+				val = 0
+			else if (val > max + 20)
+				val = max + 20
+		}
+		this.stsegmentLayer.left = -val
+	},
+
+
+	makePretty: function(){
+		this.stsegmentLayer.style.display=""
+
+		var pstyle=this.inputField.style
+		pstyle.maxWidth=
+		pstyle.opacity="0"
+
+		this.scrollLeft = this.inputField.editor.rootElement.scrollLeft;
+		gURLBar.plain=false;
+	},
+	makePlain: function(){
+		var scrollLeft = this.stsegmentLayer.scrollLeft
+		this.stsegmentLayer.style.display = "none"
+
+		var pstyle = this.inputField.style
+		pstyle.maxWidth =
+		pstyle.opacity = ""
+		//pstyle.visibility=""
+
+		this.inputField.editor.rootElement.scrollLeft = this.scrollLeft;
+		gURLBar.plain=true
+	},
+	synch: function(val){
+		var url=val
+		if(!url){
+			this.setSimpleValue()
+			return true;
+		}try {
+			var uri = makeURI(url, null, null);
+			try {
+				uri = typeof uri.host != "undefined" ? uri : {};
+			} catch (e) {
+				uri = {};
+			}
+		}catch(e) {
+			uri = null;
+		}
+
+		if (!uri) {
+			this.setSimpleValue(url);
+			return null;
+		}
+		this.setURL(uri, url);
+		return true;
+	},
+	handleEvent: function(e) {
+		if (this.selecting)
+			return
+		var oldMode = this.mode
+		var r = this.containerElement.getBoundingClientRect();
+		var x = e.clientX, y = e.clientY
+		
+		var node = this.stsegmentLayer.firstElementChild
+		var [i, j, elRect] = this.getPointOffsets(node, x, 0)
+		
+		dump(i,j,k,node.children[i])
+		return
+		
+		if (e.target == this.stsegmentLayer) {
+			this.mode = "left"
+		} else if (r.left < x && x < r.right) {
+			if (x > r.right - Math.max(80, r.width / 6)) {
+				this.mode = "left"
+			} else {
+				if (y > r.top + 3/5*r.height) {
+					this.mode = "linkMode"
+				} else {
+					this.mode = "bottom"
+				}
+			}
+		}
+		
+		if (oldMode != this.mode) {
+			var cl = this.stsegmentLayer.classList
+			cl.remove(oldMode)
+			cl.add(this.mode)
+			var cl = this.containerElement.classList
+			cl.remove(oldMode)
+			cl.add(this.mode)
+		}
+		// window.XULBrowserWindow.setOverLink(this.linkText, null);
 	}
+
+	
 })]]> </field>
 
 <field name="inputclicks"><![CDATA[({
@@ -950,7 +1049,7 @@ dump(visibleRect.left,'*******************',this.container.className)
 			this.clickCount = 0
 		} else if (event.button == 2) {
 			if (!gURLBar.plain) {
-				gURLBar.layerManager.makePlain()
+				gURLBar.selectionManager.makePlain()
 				this.p.focus()
 			}
 			this.p.select()
@@ -1021,6 +1120,10 @@ dump(visibleRect.left,'*******************',this.container.className)
 				this.clickCount = 0
 				p.selectionStart = p.selectionEnd = e
 				// this.ecbc=true
+				this.stopEvent(event)
+			} else if (p.selectionStart == l && p.selectionEnd == l) {
+				this.clickCount = 0
+				this.ecbc=true
 				this.stopEvent(event)
 			} else {
 				if (this.clickCount === 3 && e == l)
@@ -1095,110 +1198,6 @@ dump(visibleRect.left,'*******************',this.container.className)
 	}
 })]]></field>
 
-<field name="layerManager"><![CDATA[({
-	bar:this,
-	smartLayer: this.stsegmentLayer,
-	inputElement: this.inputField,
-	containerElement: this.stsegmentLayer.parentNode,
-	
-	get scrollWidth() {
-		return (this.smartLayer.clientWidth||0)
-	},
-	get scrollLeft() {
-		return -(this.smartLayer.left||0)
-	},
-	set scrollLeft(val) {
-		dump(val, this.smartLayer.clientWidth - this.containerElement.clientWidth + 20)
-		if (val <= 0){
-			val = 0
-		} else {
-			var max = this.smartLayer.clientWidth - this.containerElement.clientWidth
-			if (max <= 0)
-				val = 0
-			else if (val > max + 20)
-				val = max + 20
-		}
-		this.smartLayer.left = -val
-	},
-
-	init: function(){
-		this.containerElement.addEventListener("mousemove", this, false)
-	},
-	makePretty: function(){
-		this.smartLayer.style.display=""
-
-		var pstyle=this.inputElement.style
-		pstyle.maxWidth=
-		pstyle.opacity="0"
-
-		this.scrollLeft = this.inputElement.editor.rootElement.scrollLeft;
-		gURLBar.plain=false;
-	},
-	makePlain: function(){
-		var scrollLeft=this.smartLayer.scrollLeft
-		this.smartLayer.style.display="none"
-
-		var pstyle=this.inputElement.style
-		pstyle.maxWidth=
-		pstyle.opacity=""
-		//pstyle.visibility=""
-
-		this.inputElement.editor.rootElement.scrollLeft = this.scrollLeft;
-		gURLBar.plain=true
-	},
-	synch: function(val){
-		var url=val
-		if(!url){
-			selectionManager.emptySynch()
-			return true;
-		}try {
-			var uri = makeURI(url, null, null);
-			try {
-				uri = typeof uri.host != "undefined" ? uri : {};
-			} catch (e) {
-				uri = {};
-			}
-		}catch(e) {
-			uri = null;
-		}
-
-		if (!uri) {
-			this.bar.selectionManager.simpleSynch(url);
-			return null;
-		}
-		this.bar.selectionManager.synch(uri, url);
-		return true;
-	},
-	handleEvent: function(e){
-		var oldMode = this.mode
-		var r = this.containerElement.getBoundingClientRect();
-		var x = e.clientX, y = e.clientY
-		if (e.target == this.smartLayer) {
-			this.mode = "left"
-		} else if (r.left < x && x < r.right) {
-			if (x > r.right - Math.max(80, r.width / 6)) {
-				this.mode = "left"
-			} else {
-				if (y > r.top + 3/5*r.height) {
-					this.mode = "top"
-				} else {
-					this.mode = "bottom"
-				}
-			}
-		}
-		
-		if (oldMode != this.mode) {
-			var cl = this.smartLayer.classList
-			cl.remove(oldMode)
-			cl.add(this.mode)
-			var cl = this.containerElement.classList
-			cl.remove(oldMode)
-			cl.add(this.mode)
-		}
-		// window.XULBrowserWindow.setOverLink(this.linkText, null);
-	}
-})]]></field>
-
 		</implementation>
     <handlers>
 <handler event="focus"><![CDATA[
@@ -1209,7 +1208,7 @@ dump(visibleRect.left,'*******************',this.container.className)
 		this._focused = true;
 		this.inputField.focus()
 		if (!this.plain){
-			this.layerManager.makePlain();
+			this.selectionManager.makePlain();
 			this.inputField.select()
 			this.plain=true
 		}
@@ -1221,8 +1220,8 @@ dump(visibleRect.left,'*******************',this.container.className)
 	if (!this.mIgnoreFocus&&this._focused) {
 		this._focused = false;
 		if(this.plain){
-			this.layerManager.synch(this.inputField.value)
-			this.layerManager.makePretty()
+			this.selectionManager.synch(this.inputField.value)
+			this.selectionManager.makePretty()
 		}
 	}
 ]]></handler>

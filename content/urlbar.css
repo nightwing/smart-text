@@ -41,7 +41,7 @@ stsegment.smart-text-end{
 }
 
 /**==top bottom==**/
-.top>.smart-text-inner>stsegment:not(.marked):hover{
+.linkMode>.smart-text-inner>stsegment.hover{
 	text-decoration: underline!important;
 }
 .urlbar-input-box.top{
@@ -76,7 +76,7 @@ stsegment.basedomain{
 	text-shadow:-1px -1px 2px;
 	color:blue
 }
-.smart-text.left:hover stsegment:not(.marked){
+.smart-text.left:hover stsegment:not(.marked) {
 	color: rgba(100,100,150,0.8)!important;
 }
 stsegment.selected{

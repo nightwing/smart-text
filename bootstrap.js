@@ -43,7 +43,7 @@ function updateStyle(register, file){
 
 //
 loadIntoWindow = function(mWindow) {
-	version = 2
+	version = 1
 	Components.utils.reportError(1)
 	var prefName = "extensions.smart-text.version"
 	var v = Services.prefs.prefHasUserValue(prefName) ? Services.prefs.getIntPref(prefName) : 0
