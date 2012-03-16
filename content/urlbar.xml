@@ -440,6 +440,7 @@
 		
 		this.stsegmentLayer.addEventListener("mousedown", this.onMouseDown.bind(this), true);		
 		this.containerElement.addEventListener("mousemove", this, false)
+		this.containerElement.addEventListener("mouseout", this.onMouseout.bind(this), false)
 	},
 
 	scrollNumbers: function(text,offset,amount){
@@ -898,9 +899,9 @@ dump(visibleRect.left,'*******************',this.stsegmentLayer.className)
 		r.detach()
 		
 		if (x < rect.left + rect.width/2) 
-			return [i, j, detail && {l:rect.left, h:rect.height, b:rect.bottom}]
+			return [i, j, detail && {l:rect.left, h:rect.height, b:rect.bottom, r:rect.right}]
 		else
-			return [i, j+1, detail && {l:rect.right, h:rect.height, b:rect.bottom}]
+			return [i, j+1, detail && {l:rect.right, h:rect.height, b:rect.bottom, r:rect.right}]
 	},
 
 
@@ -985,20 +986,45 @@ dump(visibleRect.left,'*******************',this.stsegmentLayer.className)
 	handleEvent: function(e) {
 		if (this.selecting)
 			return
-		var oldMode = this.mode
+		this.mousePos ={x: e.clientX, y: e.clientY};
+		this.onMouseoverTimeout()
+		return
+		if (this.onMouseoverTimeout.timeout)
+			return
+		this.onMouseoverTimeout.timeout = setTimeout(function(){
+			if (this.selecting)
+				return
+			this.onMouseoverTimeout.timeout = null
+			this.onMouseoverTimeout()
+		}.bind(this), 20)
+	},
+	onMouseout: function(){
+		var node = this.stsegmentLayer.firstElementChild
+		var list = node.querySelectorAll('.hover')
+		for (var i = list.length; i--;)
+			list[i].classList.remove('hover')
+		if (this.onMouseoverTimeout.timeout)
+			this.onMouseoverTimeout.timeout = clearTimeout(this.onMouseoverTimeout.timeout)
+	},
+	onMouseoverTimeout: function(){
 		var r = this.containerElement.getBoundingClientRect();
-		var x = e.clientX, y = e.clientY
+		var oldMode = this.mode
+		var {x, y} = this.mousePos;
 		
 		var node = this.stsegmentLayer.firstElementChild
 		var [i, j, elRect] = this.getPointOffsets(node, x, 0)
+		dump(elRect.r, x)
 		
-		dump(i,j,k,node.children[i])
-		return
+		var oldNode = node.querySelector('.hover')
+		oldNode && oldNode.classList.remove('hover')
+		var newNode = node.children[i]
 		
-		if (e.target == this.stsegmentLayer) {
-			this.mode = "left"
-		} else if (r.left < x && x < r.right) {
-			if (x > r.right - Math.max(80, r.width / 6)) {
+		if (elRect.r > x)		
+			newNode.classList.add('hover')
+		
+		
+		if (r.left < x && x < r.right) {
+			if (x > r.right - Math.max(80, r.width / 6) || y < r.top + 2) {
 				this.mode = "left"
 			} else {
 				if (y > r.top + 3/5*r.height) {

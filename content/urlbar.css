@@ -51,14 +51,14 @@ stsegment.smart-text-end{
 	cursor:vertical-text;
 }
 .urlbar-input-box.bottom{
-	cursor:text;
+	cursor:crosshair;
 }
 
 /**==colors==**/
-stsegment:not(.marked):hover{
+stsegment:not(.marked).hover{
 	color: #1A1A1A!important;
 }
-.top > .smart-text-inner > stsegment.subdomain:not(.marked):hover{
+.top > .smart-text-inner > stsegment.subdomain:not(.marked).hover{
 	text-decoration: line-through!important;
 	color: darkblue;
 }
